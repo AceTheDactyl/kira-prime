@@ -132,3 +132,4 @@ Build Guide
   - `docs/BUILDING_VESSEL_MRP.md`
   - System Diagram & Commands: `docs/SYSTEM_DIAGRAM_API_REFERENCE.md`
   - Agents Index: `agents/README.md`
+  - Architecture overview: `docs/Architecture.md`
