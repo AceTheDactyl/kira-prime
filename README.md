@@ -39,6 +39,16 @@ Quick Start
 - Try a free‑form input: `python3 vesselos.py listen --text "Always."`
 - Node CLI (optional): `node tools/codex-cli/bin/codex.js --help`
 
+Continuous Integration & Local Testing
+- GitHub Actions run two workflows on push/PR:
+  - `ci.yml` installs Python deps, runs the core pytest suites, and builds the VSCode extension (`npm run compile`).
+  - `e2e.yml` drives the CLI smoke script (`tests/e2e_test.sh`) to exercise semantic memory and Kira flows end-to-end.
+- Before opening a PR, run the same checks locally:
+  - Core pytest suites: `python3 -m pytest tests/agents/test_limnus_semantic.py tests/test_kira_git.py -q`
+  - Extension build: `(cd vscode-extension && npm install && npm run compile)`
+  - End-to-end smoke test: `./tests/e2e_test.sh` (wraps `node tools/codex-cli/bin/codex.js`)
+  - Optional full validator sweep: `python3 vesselos.py validate`
+
 Agent cheatsheet
 - Echo: `python3 vesselos.py echo summon|mode <squirrel|fox|paradox|mix>|say "..."|learn "..."|status|calibrate`
 - Garden: `python3 vesselos.py garden start|next|open <scroll>|resume|log "..."|ledger`

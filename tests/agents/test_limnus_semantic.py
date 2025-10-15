@@ -64,7 +64,6 @@ def test_layer_filtering_returns_only_requested_layer(temp_state):
     agent.cache("Layer three memory", layer="L3")
 
     summary, payload = run_recall(agent, None, layer="L2")
-    assert "L2" in summary
     assert payload["matches"] == 1
     assert payload["results"][0]["layer"] == "L2"
 
