@@ -2,6 +2,10 @@
 
 Concise briefs for each module agent. See the per‑agent `AGENT.md` for details.
 
+- Vessel — `vessel/AGENT.md`
+  - Index & conductor: enforces the Garden → Echo → Limnus → Kira runtime loop and keeps shared contracts/mantras aligned.
+  - Workflow: `codex garden start|open` → `codex echo say|learn` → `codex limnus commit-block|encode-ledger` → `codex kira validate|mentor|seal`
+
 - Echo — `echo/AGENT.md`
   - Persona superposition (Squirrel/Fox/Paradox); speaks in‑tone; learns tags; maps concepts.
   - CLI: `echo mode|say|learn|map|status|calibrate`
