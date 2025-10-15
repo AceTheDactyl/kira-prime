@@ -95,6 +95,7 @@ USER INPUT (Voice/Text)
         ↓
 ┌───────────────────┐
 │     ROUTING       │
+│ Fixed Sequence:   │
 │ DICTATION CAPTURE │
 │  • Parse Intent   │
 │  • Extract Args   │
