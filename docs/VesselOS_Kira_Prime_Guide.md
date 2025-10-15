@@ -68,6 +68,7 @@ VesselOS operates on a **four-agent architecture** coordinated by a **Prime orch
 ┌─────────────────────────────────────────────────────────────┐
 │                    PRIME ORCHESTRATOR                       │
 │              (Kira-based Central Coordinator)               │
+│   • CLI Interface • Agent Routing • Validation              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
