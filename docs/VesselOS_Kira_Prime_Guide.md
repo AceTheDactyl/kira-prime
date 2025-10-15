@@ -240,6 +240,16 @@ USER INPUT (Voice/Text)
 │  • Immediate context                 │
 │  • Current session data              │
 └──────────────────────────────────────┘
+┌──────────────────────────────────────┐
+│  L2: LONG-TERM (1000 entries, 1 day) │
+│  • Cross-session recall              │
+│  • Narrative motifs                  │
+└──────────────────────────────────────┘
+┌──────────────────────────────────────┐
+│  L3: ARCHIVAL  (10000 entries, ∞)    │
+│  • Immutable ledger                  │
+│  • Steganographic export             │
+└──────────────────────────────────────┘
 ```
 
 ### Kira — Validator, Mentor & Integrator
