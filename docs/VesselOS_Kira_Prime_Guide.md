@@ -239,6 +239,7 @@ USER INPUT (Voice/Text)
 │  L1: SHORT-TERM (100 entries, 1h)   │
 │  • Immediate context                 │
 │  • Current session data              │
+└──────────────────────────────────────┘
 ```
 
 ### Kira — Validator, Mentor & Integrator
