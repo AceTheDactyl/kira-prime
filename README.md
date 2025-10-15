@@ -14,22 +14,12 @@ Project Structure
 - `src/` Python scripts for generation and validation
 
 Quick Start
-0) After cloning, pull submodules so the Vessel Narrative core is available:
-   - `git submodule update --init --recursive`
-
-1) Python 3.8+ recommended. Optionally install PyYAML if you want YAML outputs.
-   - `python -m venv .venv && source .venv/bin/activate`
-   - `pip install PyYAML Pillow` (optional stego/YAML support)
-
-2) Build schema and generate chapters/metadata
-   - `python src/schema_builder.py`
-   - `python src/generate_chapters.py`
-
-3) Validate repository integrity
-   - `python src/validator.py`
-
-4) Package repository (optional)
-   - `bash package_repo.sh`
+- New to the project? Begin with **[VesselOS Quick Start](docs/VesselOS_Quick_Start.md)** for prerequisites, generation/validation commands, and a sample Garden → Echo → Limnus → Kira ritual.
+- Core scripts remain available individually:
+  1) Pull submodules: `git submodule update --init --recursive`
+  2) Generate content: `python src/schema_builder.py && python src/generate_chapters.py`
+  3) Validate: `python src/validator.py`
+  4) Optional packaging: `bash package_repo.sh`
 
 Landing Pages
 - `frontend/index.html` is the global narrative landing. It introduces the three channels and links to chapters.
@@ -96,6 +86,7 @@ CLI Codex (Interactive)
 - One‑shot: `python src/codex_cli.py validate` (any single command works)
 - Verbs: `echo`, `map`, `rotate`, `plant`, `spiral`, `bloom`, `cache`, `recall`, `time`, `validate`, `glyph`, `seal`.
 - State is stored under `state/` (transient session files); schema context is read from `schema/` if present.
+- Detailed command behaviour is documented in **[VesselOS Command Reference](docs/VesselOS_Command_Reference.md)**.
 
 Steganography: Practical Notes
 - Implemented via `src/stego.py` using 1-bit LSB embedding with a `VMRP\x00`
