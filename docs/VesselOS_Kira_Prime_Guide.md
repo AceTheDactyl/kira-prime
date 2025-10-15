@@ -99,6 +99,7 @@ USER INPUT (Voice/Text)
 │ Garden→Echo→      │
 │ Limnus→Kira       │
 └────────┬──────────┘
+         ↓
 │ DICTATION CAPTURE │
 │  • Parse Intent   │
 │  • Extract Args   │
