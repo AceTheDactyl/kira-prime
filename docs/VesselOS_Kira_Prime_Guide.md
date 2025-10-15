@@ -102,6 +102,7 @@ USER INPUT (Voice/Text)
          ↓
 ┌───────────────────┐
 │  PRIME SYNTHESIS  │
+│• Validate        │
          ↓
 ┌───────────────────┐
 │   AGENT LOOP      │
