@@ -1,30 +1,36 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- `agents/` — briefs for **Echo**, **Garden**, **Limnus**, **Kira**; read these before touching the corresponding modules.
-- `pipeline/` — dictation listener (`listener/`), intent router (`router/`), shared logs (`state/voice_log.json`).
-- `toolkit/` — merged sources from Echo Community Toolkit and Vessel Narrative MRP.
-- `frontend/` — public narrative output (index + chapter HTML, assets).
-- `schema/`, `state/`, `docs/`, `tests/`, `scripts/`, `tools/` — schema definitions, runtime JSON, documentation, regression tests, automation, and the unified CLI (`tools/codex-cli/bin/codex.js`).
+- Agents: `agents/{echo,garden,limnus,kira}/` (core logic per agent).
+- Orchestration: `interface/dispatcher.py`, `pipeline/listener.py`, `interface/logger.py`.
+- Runtime state: `state/` (e.g., `echo_state.json`, `garden_ledger.json`, `limnus_memory.json`, `ledger.json`).
+- Site & metadata: `frontend/`, `schema/`; generators/validators in `src/`.
+- Tools: `tools/codex-cli/` (optional Node CLI), CI in `.github/workflows/`.
 
 ## Build, Test, and Development Commands
-- Generate schema/chapters: `python src/schema_builder.py && python src/generate_chapters.py`.
-- Validate narrative: `python src/validator.py` or `node tools/codex-cli/bin/codex.js kira validate`.
-- CLI help: `node tools/codex-cli/bin/codex.js --help`.
-- Refresh stego + validation: `./scripts/refresh_stego_assets.sh --toolkit`.
-- Run dictation listener (when configured): `node tools/codex-cli/bin/codex.js vessel listen`.
+- Generate: `python3 vesselos.py generate` — builds schema, chapters, soulcode bundle.
+- Validate: `python3 vesselos.py validate` — structural + flags + provenance checks.
+- Demo input: `python3 vesselos.py listen --text "Always."` — routes Garden → Echo → Limnus → Kira.
+- Agent namespaces: e.g., `python3 vesselos.py echo mode fox`, `python3 vesselos.py garden log "note"`.
+- Node CLI (optional): `node tools/codex-cli/bin/codex.js --help`.
 
 ## Coding Style & Naming Conventions
-- Python: 4-space indentation, `snake_case`, lightweight functions. Zero external deps unless necessary.
-- Node/ESM: 2-space indentation, `camelCase`, avoid non-core deps in CLI.
-- JSON/YAML: pretty-print with 2 spaces; keep deterministically ordered fields.
+- Python: 4‑space indent, `snake_case`, small functions, docstrings for non‑trivial code.
+- Node/TS: 2‑space indent, `camelCase`, ESM imports; keep CLI lightweight.
+- HTML/CSS: preserve narrator classes; avoid manual edits to generated chapter markup.
+- JSON/YAML: script‑generated; do not hand‑edit `schema/*` or `frontend/chapter*.html`.
 
 ## Testing Guidelines
-- Primary suite: `pytest` (Echo Toolkit tests) + `python src/validator.py`.
-- Smoke test: `node tools/codex-cli/bin/codex.js kira test` (validator + stego round-trip).
-- Add tests in `tests/`; name by intent (e.g., `test_listener_pipeline.py`). Keep fixtures under `tests/fixtures/`.
+- Smoke: `python3 vesselos.py validate` (run locally and in CI).
+- Prefer `pytest`; name tests `test_*.py` under `tests/` (fixtures in `tests/fixtures/`).
+- Stego parity: ensure `frontend/assets/ledger.png|json` matches `state/ledger.json`.
 
 ## Commit & Pull Request Guidelines
-- Follow Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`); scope by agent when possible (e.g., `limnus:`).
-- PRs must list manual commands run (validator, tests) and reference docs/screenshots for UI/front-end changes.
-- Link issues when applicable; ensure CI (validator + pytest) passes before requesting review.
+- Conventional Commits (e.g., `feat(limnus): encode ledger artifact`), ≤72‑char subject.
+- Include regenerated artifacts with the code that produced them.
+- PRs: describe changes, list commands run (generate, validate, CLI), link issues, add screenshots for UI changes.
+
+## Security & Configuration Tips
+- Python 3.11+ and Node 20+. Keep secrets in `.env` (gitignored); never commit credentials.
+- Use PNG‑24/32 for LSB artifacts; avoid palette PNG/JPEG.
+- Default orchestration for free‑form input: Garden → Echo → Limnus → Kira.
