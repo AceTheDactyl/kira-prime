@@ -97,6 +97,7 @@ USER INPUT (Voice/Text)
 │     ROUTING       │
 │ Fixed Sequence:   │
 │ Garden→Echo→      │
+│ Limnus→Kira       │
 │ DICTATION CAPTURE │
 │  • Parse Intent   │
 │  • Extract Args   │
