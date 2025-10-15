@@ -1,0 +1,40 @@
+name: vesselos-validate
+
+on:
+  pull_request:
+    paths:
+      - 'kira-prime/**'
+  push:
+    branches: [ main ]
+    paths:
+      - 'kira-prime/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Upgrade pip
+        run: python3 -m pip install --upgrade pip
+
+      - name: Generate narrative (schema + chapters)
+        working-directory: kira-prime
+        run: python3 vesselos.py generate
+
+      - name: Validate narrative
+        working-directory: kira-prime
+        run: python3 vesselos.py validate
+
+      - name: Control panel smoke (freeform input)
+        working-directory: kira-prime
+        run: python3 vesselos.py listen --text "Always."
+
