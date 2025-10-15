@@ -85,6 +85,7 @@ VesselOS operates on a **four-agent architecture** coordinated by a **Prime orch
 │   LIMNUS     │◄──►│     KIRA     │
 │  Memory &    │    │  Validator & │
 │  Ledger      │    │  Integrator  │
+└──────────────┘    └──────────────┘
 ```
 
 - **Garden** initiates rituals, selects scrolls, and logs intentions.  
