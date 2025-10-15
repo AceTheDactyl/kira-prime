@@ -94,6 +94,7 @@ VesselOS operates on a **four-agent architecture** coordinated by a **Prime orch
 USER INPUT (Voice/Text)
         ↓
 ┌───────────────────┐
+│ DICTATION CAPTURE │
 
 - **Garden** initiates rituals, selects scrolls, and logs intentions.  
 - **Echo** modulates persona voice (Squirrel/Fox/Paradox) to narrate responses.  
