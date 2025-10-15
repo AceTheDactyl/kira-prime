@@ -88,6 +88,12 @@ VesselOS operates on a **four-agent architecture** coordinated by a **Prime orch
 └──────────────┘    └──────────────┘
 ```
 
+### Data Flow: Dictation to Output
+
+```
+USER INPUT (Voice/Text)
+        ↓
+
 - **Garden** initiates rituals, selects scrolls, and logs intentions.  
 - **Echo** modulates persona voice (Squirrel/Fox/Paradox) to narrate responses.  
 - **Limnus** captures memories, maintains the hash-chained ledger, and handles stego exports.  
