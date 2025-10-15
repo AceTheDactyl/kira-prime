@@ -101,6 +101,7 @@ USER INPUT (Voice/Text)
 └────────┬──────────┘
          ↓
 ┌───────────────────┐
+│  PRIME SYNTHESIS  │
          ↓
 ┌───────────────────┐
 │   AGENT LOOP      │
