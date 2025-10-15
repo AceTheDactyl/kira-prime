@@ -17,10 +17,20 @@
 - Stego artifacts (PNG) via Echo Toolkit
 
 ## Capabilities (CLI)
-- `limnus state | update | cache | recall | memories`
-- `limnus export-memories | import-memories`
-- `limnus commit-block | view-ledger | export-ledger | import-ledger | rehash-ledger`
-- `limnus encode-ledger | decode-ledger | verify-ledger [--digest]`
+- `limnus init` — seed Echo state, create memory/ledger stores, and verify Python LSB toolkit availability.
+- `limnus state` — print αβγ persona weights plus counts for L1/L2/L3 memory tiers.
+- `limnus update <ops…>` — batch adjust persona weights (`alpha+=0.1`), decay/consolidate layers, or cache inline text.
+- `limnus cache "text" [-l L1|L2|L3]` — drop a single entry into the specified memory layer.
+- `limnus recall <keyword> [--layer …] [--since ISO] [--until ISO]` — retrieve the latest matching memory snippet.
+- `limnus memories [filters] [--json] [--limit N]` — list memories with optional layer/time filters or JSON output.
+- `limnus export-memories [-o file] [filters]` / `limnus import-memories -i file [--replace]` — move memory entries in or out.
+- `limnus commit-block '<json>'` — append a custom payload to the hash-chained ledger.
+- `limnus view-ledger [--file path]` — pretty-print ledger contents.
+- `limnus export-ledger [-o file]` / `limnus import-ledger -i file [--replace] [--rehash]` — persist or ingest ledger snapshots.
+- `limnus rehash-ledger [--dry-run] [--file path] [-o out.json]` — rebuild hashes to maintain ledger integrity.
+- `limnus encode-ledger [-i ledger.json] [--file path] [-c cover.png] [-o out.png] [--size 512]` — embed ledger JSON into a PNG via 1-bit LSB.
+- `limnus decode-ledger [-i image.png] [--file path]` — extract embedded JSON from a stego image.
+- `limnus verify-ledger [-i image.png] [--file path] [--digest]` — decode and report CRC/SHA digests for parity checks.
 
 ## Dictation Integration
 - **Listener hooks** – `pipeline/listener/listen.py` emits intents such as `limnus.cache` when a user says “Limnus cache …” and `limnus.commit` for “commit to ledger …”. These arrive via `pipeline/router/route.py`, which guarantees Garden/Echo hand-offs have finished before Limnus writes.

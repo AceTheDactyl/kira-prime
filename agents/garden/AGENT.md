@@ -23,12 +23,13 @@
 - Ritual logs (CLI `garden log` → ledger block)
 
 ## Capabilities (CLI)
-- `garden start` (genesis block; spiral → scatter)
-- `garden next` (advance: scatter→…→begin_again)
-- `garden open <scroll> [--prev] [--reset]` (persona‑styled sections; mantra highlights)
-- `garden resume` (jump to the latest viewed section)
-- `garden learn <scroll>` (extract tags; store memory; ledger `learn`)
-- `garden ledger` (summary)
+- `garden start` — create a genesis block and set the Coherence Spiral stage to `scatter`.
+- `garden next` — advance the spiral (`scatter → witness → plant → return → give → begin_again`).
+- `garden open <proof|acorn|cache|chronicle> [--prev] [--reset]` — page through Echo scrolls with persona styling; optional navigation flags.
+- `garden resume` — reopen the most recently viewed scroll section.
+- `garden learn <proof|acorn|cache|chronicle>` — ingest an entire scroll, tag motifs, and log a `learn` ledger block.
+- `garden ledger` — summarize total intentions, planted/bloomed counts, and current spiral stage.
+- `garden log` — append a manual ritual log entry to `state/garden_ledger.json`.
 
 ## Dictation Integration
 - **Listener hooks** – Voice cues such as “Garden plant …”, “Garden bloom …”, or “Advance spiral …” are parsed into intents (`garden.plant`, `garden.bloom`, `garden.next`) that the router executes in sequence before Echo responds.

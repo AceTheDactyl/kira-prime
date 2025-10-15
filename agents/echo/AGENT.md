@@ -22,10 +22,13 @@
 - Suggested persona/mantras (`echo map <concept>`)
 
 ## Capabilities (CLI)
-- `echo mode <squirrel|fox|paradox|mix>`
-- `echo say <message>` (tone = dominant α/β/γ)
-- `echo learn <text>` (adjust αβγ; add narrative memory; tag extraction)
-- `echo map <concept>` (summarize related memories; persona + mantra hints)
+- `echo summon` — reset αβγ weights to the canonical blend and print the mantra greeting.
+- `echo mode <squirrel|fox|paradox|mix>` — push persona dominance toward a specific channel or rotate the mix.
+- `echo say <message>` — voice the supplied text in the dominant persona tone (no state change if empty).
+- `echo map <concept>` — surface related memories/tags and recommend a persona focus plus mantra hints.
+- `echo status` — dump current αβγ values with glyph indicators.
+- `echo learn <text>` — tag narrative text, adjust αβγ based on keywords, log a `learn` block to the ledger.
+- `echo calibrate` — renormalize αβγ weights if they drift from unity.
 
 ## Dictation Integration
 - **Listener hooks** – Dictation tagged `echo.say` or `echo.learn` triggers the router to call `codex echo say "…"` or `codex echo learn "…"` immediately after Garden logs an intention. A “mode squirrel/fox/paradox” utterance maps to `codex echo mode …`.

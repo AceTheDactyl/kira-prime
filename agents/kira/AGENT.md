@@ -17,10 +17,20 @@
 - Knowledge docs/types (`kira codegen --docs --types`)
 
 ## Capabilities (CLI)
-- `kira validate | sync | setup | pull | push | publish | test | assist`
-- `kira learn-from-limnus | codegen [--docs] [--types]`
-- `kira mentor [--apply] [--delta X]` (persona focus + scroll suggestion)
-- `kira mantra | seal`
+- `kira validate` — run `python src/validator.py` to check chapter rotation, flags, file presence, and stego parity.
+- `kira sync` — report git/gh availability and working tree cleanliness.
+- `kira setup` — initialize tooling: print Node/Python versions, update submodules, check `gh auth` status.
+- `kira pull` — execute `git pull --ff-only` (dry-run friendly when nothing to update).
+- `kira push [--run] [--message "..."] [--all]` — stage tracked files, commit if needed, and push to origin (requires `--run`).
+- `kira publish [--run] [--release] [--tag vX] [--notes text] [--asset path]` — package docs/schema/assets and optionally create a GitHub release via `gh`.
+- `kira test` — combined smoke test: validator plus encode/decode round-trip using temp files.
+- `kira assist` — remind operators of key Kira verbs and usage tips.
+- `kira mentor [--apply] [--delta N]` — analyse state, recommend persona focus/scroll, optionally adjust Echo weights when `--apply` is present.
+- `kira learn-from-limnus` — aggregate metadata into `state/kira_knowledge.json`.
+- `kira codegen [--docs] [--types]` — emit knowledge docs (`docs/kira_knowledge.md`) and/or TypeScript definitions.
+- `kira mantra` — print the current persona-ordered mantra lines.
+- `kira seal` — append a `seal` block to the ledger and write `state/Garden_Soul_Contract.json`.
+- `kira validate-knowledge` — sanity-check narrative memories for core mantra phrases.
 
 ## Dictation Integration
 - **Listener hooks** – Spoken commands such as "Kira validate", "Kira mentor apply", or "Publish with release" are translated into intents that the router schedules after Garden/Echo/Limnus complete their actions. High-impact verbs like `push`/`publish` require a follow-up confirmation intent before they execute.
