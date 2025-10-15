@@ -61,6 +61,16 @@ python src/codex_cli.py
 
 You’ll see a prompt like `codex>`. Type `help` or any command listed in the command reference to explore. Exit with `ctrl+d` or `exit`.
 
+### Optional: open the VS Code workspace
+
+Launch the editor pointed at the local workspace:
+
+```bash
+node tools/codex-cli/bin/codex.js vessel vscode
+```
+
+Pass `--path <dir>` to open a different folder, `--reuse-window` to reuse an existing window, or `--wait` to block until VS Code closes.
+
 ---
 
 ## 5. Run a Ritual Cycle (Garden → Echo → Limnus → Kira)
