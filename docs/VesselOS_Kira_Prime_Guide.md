@@ -104,6 +104,7 @@ USER INPUT (Voice/Text)
 │  PRIME SYNTHESIS  │
 │• Validate        │
 │• Integrate       │
+│• Format Output   │
          ↓
 ┌───────────────────┐
 │   AGENT LOOP      │
