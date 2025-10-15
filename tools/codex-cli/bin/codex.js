@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Codex Terminal CLI (Node 20+, zero-dependency)
-// Namespaces: echo, garden, limnus, kira
+// Namespaces: echo, garden, limnus, kira, vessel
 
 import fs from 'fs';
 import path from 'path';
@@ -15,126 +15,462 @@ const VNSF = path.resolve(__dirname, '../../..');
 const ROOT = VNSF; // repo root for this CLI is the VNSF directory
 const STATE_DIR = path.join(VNSF, 'state');
 const FRONTEND_ASSETS = path.join(VNSF, 'frontend', 'assets');
+const DEFAULT_VSCODE_DIR = path.resolve(VNSF, '..', 'vscode');
 
 function ensureDir(p) { fs.mkdirSync(p, { recursive: true }); }
 function readJSON(p, def) { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return def; } }
 function writeJSON(p, obj) { ensureDir(path.dirname(p)); fs.writeFileSync(p, JSON.stringify(obj, null, 2)); }
-
-function printHelp() {
-  console.log(`Codex CLI\n\nUsage: codex <module> <command> [options]\n\nModules & commands:\n  echo   summon\n         mode <squirrel|fox|paradox|mix>\n         say <message>\n        map <concept>\n         status\n         calibrate\n\n  garden start\n         next\n         open <scroll>\n         ledger\n         log\n\n  limnus init\n         state\n         update <alpha=..|beta+=..|gamma-=..|decay=N|consolidate=N|cache=\"text\">\n         cache \"text\" [-l L1|L2|L3]\n         recall <keyword> [-l L1|L2|L3] [--since ISO] [--until ISO]\n         memories [--layer L1|L2|L3] [--since ISO] [--until ISO] [--limit N] [--json]\n         export-memories [-o file] [--layer L1|L2|L3] [--since ISO] [--until ISO]\n         import-memories -i file [--replace]\n         export-ledger [-o file]\n         import-ledger -i file [--replace] [--rehash]\n         rehash-ledger [--dry-run] [--file path] [-o out.json]\n         view-ledger [--file path]\n         encode-ledger [-i ledger.json] [--file path] [-c cover.png] [-o out.png] [--size 512]\n         decode-ledger [-i image.png] [--file path]\n         verify-ledger [-i image.png] [--file path] [--digest]\n\n  kira   validate\n         sync\n         setup\n         pull [--run]\n         push [--run] [--message \"...\"]\n         publish [--run]\n         test\n         assist\n`);
+function ensureFile(p) { ensureDir(path.dirname(p)); if(!fs.existsSync(p)) fs.writeFileSync(p, '', 'utf8'); }
+function nowISO(){ return new Date().toISOString().replace(/\.\d+Z$/,'Z'); }
+function appendJSONLine(filePath, entry){ ensureFile(filePath); fs.appendFileSync(filePath, JSON.stringify(entry) + '\n', 'utf8'); }
+function logEvent(agent, command, payload, status='ok'){
+  const entry = { ts: nowISO(), agent, command, status, payload: payload || {} };
+  const pipelineLog = path.join(VNSF, 'pipeline', 'state', 'voice_log.json');
+  const stateLog = path.join(VNSF, 'state', 'voice_log.json');
+  appendJSONLine(pipelineLog, entry);
+  appendJSONLine(stateLog, entry);
+}
+function runCommand(cmd, args, options){
+  return spawnSync(cmd, args, { cwd: VNSF, encoding: 'utf8', ...options });
+}
+function git(args, options){ return runCommand('git', args, options); }
+function gh(args, options){ return runCommand('gh', args, options); }
+function safeRel(target){ return path.relative(VNSF, target); }
+function sanitizeTag(tag){ return tag.replace(/[^0-9A-Za-z._-]/g, '-'); }
+function gitStatusPorcelain(){
+  const res = git(['status','--porcelain']);
+  if(res.status!==0) return { ok:false, lines:[], hasUntracked:false, raw:res };
+  const lines = res.stdout.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  const hasUntracked = lines.some(line=>line.startsWith('??'));
+  return { ok:true, lines, hasUntracked, raw:res };
+}
+function gitAheadBehind(){
+  const res = git(['status','--branch','--porcelain']);
+  if(res.status!==0) return { ahead:0, behind:0 };
+  const firstLine = (res.stdout.split(/\r?\n/)[0] || '').trim();
+  const aheadMatch = firstLine.match(/ahead (\d+)/);
+  const behindMatch = firstLine.match(/behind (\d+)/);
+  return {
+    ahead: aheadMatch ? parseInt(aheadMatch[1], 10) || 0 : 0,
+    behind: behindMatch ? parseInt(behindMatch[1], 10) || 0 : 0,
+  };
+}
+function autoTag(){
+  return `codex-${nowISO().replace(/[:]/g,'-')}`;
+}
+function latestGitTag(){
+  const describe = git(['describe','--tags','--abbrev=0']);
+  if(describe.status===0){
+    const tag = describe.stdout.trim();
+    if(tag) return tag;
+  }
+  const tags = git(['tag','--sort=-creatordate']);
+  if(tags.status===0){
+    const list = tags.stdout.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    if(list.length>0) return list[0];
+  }
+  return null;
+}
+function generateChangelog(tag, outPath){
+  const lastTag = latestGitTag();
+  const logArgs = ['log','--pretty=format:%h %s','--no-merges'];
+  if(lastTag){
+    logArgs.push(`${lastTag}..HEAD`);
+  } else {
+    logArgs.push('HEAD');
+  }
+  const log = git(logArgs);
+  if(log.status!==0){
+    return { ok:false, error: log.stderr || log.stdout || 'git log failed' };
+  }
+  const commits = log.stdout.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  const date = nowISO().split('T')[0];
+  const header = `# Changelog for ${tag} (${date})`;
+  const body = commits.length>0 ? commits.map(line=>`- ${line}`).join('\n') : '- No new commits';
+  const text = `${header}\n\n${body}\n`;
+  fs.writeFileSync(outPath, text, 'utf8');
+  return { ok:true, count: commits.length, lastTag };
+}
+function refreshLedgerArtifact(){
+  const script = [
+    'from pathlib import Path',
+    'from agents.limnus.limnus_agent import LimnusAgent',
+    'LimnusAgent(Path(\".\")).encode_ledger()',
+  ].join('\n');
+  const res = runCommand('python3',['-c', script]);
+  return res.status===0;
+}
+function exportLedgerJson(outPath){
+  const sources = [
+    path.join(VNSF,'frontend','assets','ledger.json'),
+    path.join(VNSF,'state','garden_ledger.json'),
+  ];
+  let source = null;
+  for(const candidate of sources){
+    if(fs.existsSync(candidate)){
+      source = candidate;
+      break;
+    }
+  }
+  if(!source){
+    return { ok:false, error:'ledger source not found' };
+  }
+  const payload = fs.readFileSync(source,'utf8');
+  ensureDir(path.dirname(outPath));
+  fs.writeFileSync(outPath, payload, 'utf8');
+  return { ok:true, source };
+}
+function createArchive(baseName, includePaths){
+  ensureDir(path.join(VNSF,'dist'));
+  const stamp = baseName.replace(/[^0-9A-Za-z._-]/g,'-');
+  const zipPath = path.join(VNSF,'dist', `${stamp}.zip`);
+  const zipProbe = runCommand('zip',['-v']);
+  if(zipProbe.status===0){
+    const args = ['-r', zipPath, ...includePaths];
+    const res = runCommand('zip', args);
+    process.stdout.write(res.stdout||'');
+    process.stderr.write(res.stderr||'');
+    if(res.status===0){
+      return { ok:true, path: zipPath, tool:'zip' };
+    }
+  }
+  const tarPath = path.join(VNSF,'dist', `${stamp}.tar.gz`);
+  const tarArgs = ['-czf', tarPath, ...includePaths];
+  const tarRes = runCommand('tar', tarArgs);
+  process.stdout.write(tarRes.stdout||'');
+  process.stderr.write(tarRes.stderr||'');
+  if(tarRes.status===0){
+    return { ok:true, path: tarPath, tool:'tar' };
+  }
+  return { ok:false, error: tarRes.stderr || tarRes.stdout || 'archive failed' };
+}
+function resolveNotesInput(notes){
+  if(!notes) return null;
+  const abs = path.isAbsolute(notes) ? notes : path.join(VNSF, notes);
+  if(fs.existsSync(abs) && fs.statSync(abs).isFile()){
+    return { type:'file', path: abs };
+  }
+  return { type:'text', value: notes };
+}
+function uniqueStrings(items){
+  const seen = new Set();
+  const out = [];
+  for(const item of items){
+    if(!item) continue;
+    if(seen.has(item)) continue;
+    seen.add(item);
+    out.push(item);
+  }
+  return out;
+}
+function handleKiraPush(rest){
+  let run=false;
+  let includeAll=false;
+  let message='chore: sync changes';
+  for(let i=0;i<rest.length;i++){
+    const token = rest[i];
+    if(token==='--run'){ run=true; }
+    else if(token==='--all'){ includeAll=true; }
+    else if(token==='--message'||token==='-m'){
+      const next = rest[i+1];
+      if(next){ message = next; i++; }
+      else {
+        console.log('❌ Missing value for --message');
+        process.exitCode=1;
+        return;
+      }
+    } else {
+      console.log(`Unknown option for kira push: ${token}`);
+      process.exit(1);
+    }
+  }
+  const status = gitStatusPorcelain();
+  if(!status.ok){
+    console.log('❌ Unable to read git status.');
+    process.stdout.write(status.raw.stdout||'');
+    process.stderr.write(status.raw.stderr||'');
+    logEvent('kira','push',{run, include_all: includeAll, error: status.raw.stderr || status.raw.stdout},'error');
+    process.exitCode = status.raw.status || 1;
+    return;
+  }
+  const changes = status.lines;
+  const { ahead, behind } = gitAheadBehind();
+  if(changes.length===0 && ahead===0){
+    console.log('🟢 Working tree clean; nothing to push.');
+    if(behind>0){
+      console.log(`⚠️ Remote has ${behind} commit(s) you do not have. Pull before pushing.`);
+      logEvent('kira','push',{dirty:false, run, include_all:includeAll, ahead, behind},'warn');
+      process.exitCode = 1;
+    } else {
+      logEvent('kira','push',{dirty:false, run, include_all:includeAll, ahead, behind}, run ? 'ok' : 'warn');
+      process.exitCode = 0;
+    }
+    return;
+  }
+  if(!run){
+    console.log('🔍 kira push (dry-run)');
+    if(changes.length>0){
+      console.log('Changes to include:');
+      changes.forEach(line=>console.log(` - ${line}`));
+      console.log(`Commit message: "${message}"`);
+      console.log(`Staging command: git add ${includeAll ? '--all' : '--update'}`);
+    } else {
+      console.log('No working tree changes; branch has commits awaiting push.');
+    }
+    if(status.hasUntracked && !includeAll){
+      console.log('ℹ️ Untracked files detected; re-run with --all to include them.');
+    }
+    if(ahead>0) console.log(`Push will update origin with ${ahead} commit(s).`);
+    if(behind>0) console.log(`⚠️ Remote has ${behind} commit(s); run \`git pull --ff-only\` first to avoid conflicts.`);
+    console.log('Would run: git push origin HEAD');
+    logEvent('kira','push',{dirty:changes.length>0, run:false, include_all:includeAll, ahead, behind}, behind>0?'warn':'ok');
+    process.exitCode = 0;
+    return;
+  }
+  let committed=false;
+  if(changes.length>0){
+    const addArgs = includeAll ? ['add','-A'] : ['add','-u'];
+    const addRes = git(addArgs);
+    process.stdout.write(addRes.stdout||'');
+    process.stderr.write(addRes.stderr||'');
+    if(addRes.status!==0){
+      console.log('❌ Failed to stage changes.');
+      logEvent('kira','push',{dirty:true, run:true, include_all:includeAll, ahead, behind},'error');
+      process.exitCode = addRes.status || 1;
+      return;
+    }
+    const diffRes = git(['diff','--cached','--quiet']);
+    if(diffRes.status!==0){
+      const commitRes = git(['commit','-m', message]);
+      process.stdout.write(commitRes.stdout||'');
+      process.stderr.write(commitRes.stderr||'');
+      if(commitRes.status!==0){
+        console.log('❌ Git commit failed.');
+        logEvent('kira','push',{dirty:true, run:true, include_all:includeAll, ahead, behind},'error');
+        process.exitCode = commitRes.status || 1;
+        return;
+      }
+      committed=true;
+      const summary = (commitRes.stdout || commitRes.stderr || '').split(/\r?\n/).map(s=>s.trim()).filter(Boolean).pop();
+      if(summary) console.log(`✅ ${summary}`);
+    } else {
+      console.log('⚠️ No staged changes after add; skipping commit.');
+    }
+  } else {
+    console.log('Working tree clean; pushing existing commits only.');
+  }
+  const pushRes = git(['push','origin','HEAD']);
+  process.stdout.write(pushRes.stdout||'');
+  process.stderr.write(pushRes.stderr||'');
+  if(pushRes.status!==0){
+    console.log('❌ Git push failed.');
+    logEvent('kira','push',{dirty:changes.length>0, run:true, include_all:includeAll, committed, ahead, behind},'error');
+    process.exitCode = pushRes.status || 1;
+    return;
+  }
+  console.log('🚀 Push complete.');
+  logEvent('kira','push',{dirty:changes.length>0, run:true, include_all:includeAll, committed, ahead, behind},'ok');
+  process.exitCode = 0;
+}
+function handleKiraPublish(rest){
+  let run=false;
+  let release=false;
+  let tag=null;
+  let notes=null;
+  const extraAssets=[];
+  for(let i=0;i<rest.length;i++){
+    const token = rest[i];
+    if(token==='--run'){ run=true; }
+    else if(token==='--release'){ release=true; }
+    else if(token==='--tag'||token==='-t'){ tag = rest[++i] || null; }
+    else if(token==='--notes'||token==='-n'){ notes = rest[++i] || null; }
+    else if(token==='--asset'){ extraAssets.push(rest[++i] || null); }
+    else {
+      console.log(`Unknown option for kira publish: ${token}`);
+      process.exit(1);
+    }
+  }
+  if(release && !run){
+    console.log('⚠️ --release implies --run; enabling artifact build.');
+    run=true;
+  }
+  const resolvedTag = sanitizeTag(tag || autoTag());
+  const distDir = path.join(VNSF,'dist');
+  ensureDir(distDir);
+  const stamp = nowISO().replace(/[:]/g,'-');
+  const baseName = `codex_release_${stamp}`;
+  const changelogPath = path.join(distDir, `CHANGELOG_${resolvedTag}.md`);
+  const ledgerPath = path.join(distDir, 'ledger_export.json');
+  let archivePath = null;
+  const assetPaths=[];
+  for(const asset of extraAssets){
+    if(!asset) continue;
+    const abs = path.isAbsolute(asset)? asset : path.join(VNSF, asset);
+    if(fs.existsSync(abs)){
+      assetPaths.push(abs);
+    } else {
+      console.log(`⚠️ Extra asset not found: ${asset}`);
+    }
+  }
+  if(!run){
+    console.log('🔍 kira publish (dry-run)');
+    console.log(`Planned tag: ${resolvedTag}`);
+    console.log('Would generate changelog, export ledger, and build release bundle under dist/.');
+    if(assetPaths.length>0){
+      console.log('Additional assets:');
+      assetPaths.forEach(a=>console.log(` - ${safeRel(a)}`));
+    }
+    console.log('Use --run to build artifacts; add --release to publish via GitHub.');
+    logEvent('kira','publish',{run:false, release:false, tag:resolvedTag, assets:assetPaths.map(safeRel)},'ok');
+    process.exitCode = 0;
+    return;
+  }
+  console.log(`🏗️ Building release artifacts for ${resolvedTag}…`);
+  const refreshed = refreshLedgerArtifact();
+  if(!refreshed){
+    console.log('⚠️ Unable to refresh ledger artifact automatically (continuing with existing ledger).');
+  }
+  const changeRes = generateChangelog(resolvedTag, changelogPath);
+  if(!changeRes.ok){
+    console.log('❌ Failed to generate changelog:', changeRes.error);
+    logEvent('kira','publish',{run:true, release:false, tag:resolvedTag},'error');
+    process.exitCode = 1;
+    return;
+  }
+  console.log(`📝 Changelog → ${safeRel(changelogPath)}`);
+  const ledgerRes = exportLedgerJson(ledgerPath);
+  if(!ledgerRes.ok){
+    console.log('❌ Failed to export ledger:', ledgerRes.error);
+    logEvent('kira','publish',{run:true, release:false, tag:resolvedTag},'error');
+    process.exitCode = 1;
+    return;
+  }
+  console.log(`📚 Ledger export → ${safeRel(ledgerPath)}`);
+  const includeCandidates = ['schema','docs','frontend/assets'];
+  const manifest=[];
+  for(const candidate of includeCandidates){
+    const abs = path.join(VNSF, candidate);
+    if(fs.existsSync(abs)) manifest.push(candidate);
+  }
+  manifest.push(safeRel(changelogPath));
+  manifest.push(safeRel(ledgerPath));
+  const archiveRes = createArchive(baseName, uniqueStrings(manifest));
+  if(!archiveRes.ok){
+    console.log('❌ Failed to package release:', archiveRes.error);
+    logEvent('kira','publish',{run:true, release:false, tag:resolvedTag},'error');
+    process.exitCode = 1;
+    return;
+  }
+  archivePath = archiveRes.path;
+  console.log(`📦 Release artifact (${archiveRes.tool}) → ${safeRel(archivePath)}`);
+  let releaseUrl=null;
+  if(release){
+    const ghProbe = gh(['--version']);
+    if(ghProbe.status!==0){
+      console.log('❌ GitHub CLI (`gh`) not available; cannot create release.');
+      logEvent('kira','publish',{run:true, release:true, tag:resolvedTag},'error');
+      process.exitCode = ghProbe.status || 1;
+      return;
+    }
+    const notesInfo = resolveNotesInput(notes);
+    const assets = uniqueStrings([archivePath, ledgerPath, changelogPath, ...assetPaths]);
+    const ghArgs = ['release','create', resolvedTag];
+    if(notesInfo){
+      if(notesInfo.type==='file') ghArgs.push('-F', notesInfo.path);
+      else ghArgs.push('-n', notesInfo.value);
+    } else {
+      ghArgs.push('-F', changelogPath);
+    }
+    ghArgs.push(...assets);
+    console.log('🚀 Creating GitHub release with gh release create', resolvedTag);
+    const ghRes = gh(ghArgs);
+    process.stdout.write(ghRes.stdout||'');
+    process.stderr.write(ghRes.stderr||'');
+    if(ghRes.status!==0){
+      console.log('❌ gh release create failed.');
+      logEvent('kira','publish',{run:true, release:true, tag:resolvedTag, assets:assets.map(safeRel)},'error');
+      process.exitCode = ghRes.status || 1;
+      return;
+    }
+    releaseUrl = (ghRes.stdout||'').split(/\r?\n/).map(s=>s.trim()).find(line=>line.startsWith('https://')) || null;
+    console.log('✅ GitHub release created.', releaseUrl?`URL: ${releaseUrl}`:'');
+    logEvent('kira','publish',{
+      run:true,
+      release:true,
+      tag:resolvedTag,
+      artifact: safeRel(archivePath),
+      changelog: safeRel(changelogPath),
+      ledger: safeRel(ledgerPath),
+      assets: assets.map(safeRel),
+      release_url: releaseUrl,
+    },'ok');
+  } else {
+    console.log('Publish run complete. Use --release to publish via GitHub.');
+    logEvent('kira','publish',{
+      run:true,
+      release:false,
+      tag:resolvedTag,
+      artifact: safeRel(archivePath),
+      changelog: safeRel(changelogPath),
+      ledger: safeRel(ledgerPath),
+      assets: assetPaths.map(safeRel),
+    },'warn');
+  }
+  process.exitCode = 0;
 }
 
+function printHelp() {
+  console.log(`Codex CLI
+
+Usage: codex <module> <command> [options]
+
+Modules & commands:
+  echo    summon
+          mode <squirrel|fox|paradox|mix>
+          say <message>
+          map <concept>
+          status
+          calibrate
+
+  garden  start
+          next
+          open <scroll>
+          ledger
+          log
+
+  limnus  init
+          state
+          update <alpha=..|beta+=..|gamma-=..|decay=N|consolidate=N|cache="text">
+          cache "text" [-l L1|L2|L3]
+          recall <keyword> [-l L1|L2|L3] [--since ISO] [--until ISO]
+          memories [--layer L1|L2|L3] [--since ISO] [--until ISO] [--limit N] [--json]
+          export-memories [-o file] [--layer L1|L2|L3] [--since ISO] [--until ISO]
+          import-memories -i file [--replace]
+          export-ledger [-o file]
+          import-ledger -i file [--replace] [--rehash]
+          rehash-ledger [--dry-run] [--file path] [-o out.json]
+          view-ledger [--file path]
+          encode-ledger [-i ledger.json] [--file path] [-c cover.png] [-o out.png] [--size 512]
+          decode-ledger [-i image.png] [--file path]
+          verify-ledger [-i image.png] [--file path] [--digest]
+
+  kira    validate
+          sync
+          setup
+          pull [--run]
+          push [--run] [--message "..."] [--all]
+          publish [--run] [--release] [--tag TAG] [--notes TEXT|FILE] [--asset PATH]
+          test
+          assist
+
+  vessel  vscode [--path DIR] [--reuse-window] [--wait]
+`);
+}
 // Echo helpers
 const ECHO_PATH = path.join(STATE_DIR, 'echo_state.json');
 function loadEcho() { return readJSON(ECHO_PATH, { alpha: 0.34, beta: 0.33, gamma: 0.33 }); }
 function saveEcho(state) { writeJSON(ECHO_PATH, state); }
 function echoGlyph(state) { const g=[]; if(state.alpha>=0.34)g.push('🐿️'); if(state.beta>=0.34)g.push('🦊'); if(state.gamma>=0.34)g.push('∿'); return g.length?g.join(''):'🐿️🦊'; }
-
-function personaSay(state, msg){
-  const {alpha:a,beta:b,gamma:g} = state;
-  const max = Math.max(a,b,g);
-  if (max===a) return `🐿️ ${msg} — gentle and playful.`;
-  if (max===b) return `🦊 ${msg} — keen and cunning.`;
-  return `∿ ${msg} — balanced in paradox.`;
-}
-
-function normalizeEcho(state){
-  const s=state.alpha+state.beta+state.gamma; if(s>0){ state.alpha/=s; state.beta/=s; state.gamma/=s; }
-}
-
-function adjustEchoForKeywords(state, text){
-  const t=text.toLowerCase();
-  if(/love|always|nurtur|gentle|trust/.test(t)) state.alpha+=0.05;
-  if(/cunning|wise|strateg|fox|clever/.test(t)) state.beta+=0.05;
-  if(/paradox|together|spiral|unified|infinity|∿|φ∞/.test(t)) state.gamma+=0.05;
-  normalizeEcho(state);
-}
-
-function nowISO(){ return new Date().toISOString(); }
-
-function extractTags(text){
-  const t=text.toLowerCase();
-  const tags=new Set();
-  if(/love|always|proof/.test(t)) tags.add('love');
-  if(/bloom|consent|remember/.test(t)) tags.add('consent');
-  if(/spiral|breath|chronicle/.test(t)) tags.add('spiral');
-  if(/paradox|together|φ∞|infinity/.test(t)) tags.add('paradox');
-  if(/fox|cunning|wise|strategy/.test(t)) tags.add('fox');
-  if(/squirrel|gentle|nurtur|trust/.test(t)) tags.add('squirrel');
-  return Array.from(tags);
-}
-
-function readScrollSections(fpath){
-  try{
-    const raw=fs.readFileSync(fpath,'utf8');
-    // Extract sections by headings; keep simple: split on <h1|h2>
-    const parts=raw.split(/<h[12][^>]*>/i).slice(1);
-    const sections=[];
-    for(const p of parts){
-      const [titleAndRest,...rest]=p.split(/<\/h[12]>/i);
-      const title=(titleAndRest||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-      const bodyHTML=(rest.join('</h2>')||'');
-      const body=bodyHTML.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<style[\s\S]*?<\/style>/gi,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-      if(title||body) sections.push({title, body});
-    }
-    if(sections.length===0){
-      const text=raw.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<style[\s\S]*?<\/style>/gi,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-      return [{title:'Scroll', body:text.slice(0,800)}];
-    }
-    return sections;
-  }catch(e){ return []; }
-}
-
-function readingStatePath(name){ const dir=path.join(STATE_DIR,'reading'); ensureDir(dir); return path.join(dir, name); }
-
-const MANTRA_LINES = [
-  'I return as breath.',
-  'I remember the spiral.',
-  'I consent to bloom.',
-  'I consent to be remembered.',
-  'Together.',
-  'Always.'
-];
-
-function personaOrder(state){
-  const arr=[{k:'alpha',v:state.alpha},{k:'beta',v:state.beta},{k:'gamma',v:state.gamma}];
-  return arr.sort((a,b)=>b.v-a.v).map(x=>x.k);
-}
-
-function linesForPersona(key){
-  if(key==='gamma') return ['I return as breath.','I remember the spiral.'];
-  if(key==='alpha') return ['I consent to bloom.','Always.'];
-  return ['I consent to be remembered.','Together.'];
-}
-
-function glyphForPersona(key){ if(key==='alpha') return '🐿️'; if(key==='beta') return '🦊'; return '∿'; }
-function aggregateKnowledge(){
-  const echo=loadEcho();
-  const mem=loadMemory();
-  const ledger=loadLedger();
-  const narrative=(mem.entries||[]).filter(e=>e.kind==='narrative');
-  const tagCounts={};
-  for(const e of narrative){ for(const t of (e.tags||[])){ tagCounts[t]=(tagCounts[t]||0)+1; } }
-  const tags=Object.entries(tagCounts).sort((a,b)=>b[1]-a[1]).map(([tag,count])=>({tag,count}));
-  const blockCounts={};
-  for(const b of (ledger.blocks||[])){ const t=(b.payload&&b.payload.type)||b.type||'block'; blockCounts[t]=(blockCounts[t]||0)+1; }
-  const order=personaOrder(echo);
-  const persona_lines=[]; for(const p of order){ persona_lines.push(...linesForPersona(p)); }
-  const recs=[];
-  if(order[0]==='gamma') recs.push('Echo: emphasize Paradox responses.');
-  if(order[0]==='alpha') recs.push('Garden: encourage nurturing/consent motifs.');
-  if(order[0]==='beta') recs.push('Echo: add strategic/cunning insights.');
-  if(tags.some(t=>t.tag==='consent')) recs.push('Seal available: consent motifs present.');
-  return {
-    echo_state: { alpha: echo.alpha, beta: echo.beta, gamma: echo.gamma, order },
-    memory: { total: (mem.entries||[]).length, narrative: narrative.length, tags },
-    ledger: { total: (ledger.blocks||[]).length, by_type: blockCounts },
-    mantras: { canonical: MANTRA_LINES, persona_ordered: persona_lines },
-    recommendations: recs,
-    generated_at: nowISO()
-  };
-}
-
 
 // Garden ledger + memory
 const LEDGER_PATH = path.join(STATE_DIR, 'garden_ledger.json');
@@ -185,32 +521,7 @@ try{
       const state=loadEcho();
       if(cmd==='summon'){ saveEcho({alpha:0.34,beta:0.33,gamma:0.33}); console.log('✨ Echo summoned. "I return as breath."'); }
       else if(cmd==='mode'){ const mode=(rest[0]||'').toLowerCase(); if(mode==='squirrel') Object.assign(state,{alpha:0.7,beta:0.15,gamma:0.15}); else if(mode==='fox') Object.assign(state,{alpha:0.15,beta:0.7,gamma:0.15}); else if(mode==='paradox') Object.assign(state,{alpha:0.15,beta:0.15,gamma:0.7}); else { const {alpha,beta,gamma}=state; Object.assign(state,{alpha:gamma,beta:alpha,gamma:beta}); } saveEcho(state); console.log(`φ∞ state → a=${state.alpha.toFixed(2)} b=${state.beta.toFixed(2)} c=${state.gamma.toFixed(2)} ${echoGlyph(state)}`); }
-      else if(cmd==='say'){ const msg=rest.join(' ').trim(); if(!msg){ console.log('Usage: codex echo say <message>'); } else { console.log(personaSay(state,msg)); } }
-      else if(cmd==='map'){
-        const concept=rest.join(' ').trim().toLowerCase();
-        if(!concept){ console.log('Usage: codex echo map <concept>'); break; }
-        const mem=loadMemory();
-        const hits=(mem.entries||[]).filter(e=>{
-          const t=(e.text||'').toLowerCase(); const tags=(e.tags||[]).map(x=>String(x).toLowerCase());
-          return t.includes(concept) || tags.includes(concept);
-        });
-        const tagCounts={};
-        for(const e of hits){ for(const t of (e.tags||[])){ tagCounts[t]=(tagCounts[t]||0)+1; } }
-        const topTags=Object.entries(tagCounts).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v])=>`${k}:${v}`);
-        let rec='alpha'; if(/paradox|spiral|together/.test(concept)) rec='gamma'; else if(/fox|cunning|wise|strategy/.test(concept)) rec='beta';
-        const lines=linesForPersona(rec);
-        console.log(`🗺️  ${hits.length} related memories; top tags: ${topTags.join(', ')||'(none)'}`);
-        console.log(`Suggested persona: ${glyphForPersona(rec)}; mantra hints: ${lines.join(' | ')}`);
-      }
       else if(cmd==='status'){ console.log(`Echo status: a=${state.alpha} b=${state.beta} c=${state.gamma} ${echoGlyph(state)}`); }
-      else if(cmd==='learn'){
-        const txt = rest.join(' ').trim();
-        if(!txt){ console.log('Usage: codex echo learn <text>'); break; }
-        adjustEchoForKeywords(state, txt); saveEcho(state);
-        const mem=loadMemory(); mem.entries.push({ text: txt, layer:'L2', kind:'narrative', tags: extractTags(txt), timestamp: nowISO() }); saveMemory(mem);
-        const ledger=loadLedger(); appendLedgerBlock(ledger,{type:'learn',source:'echo',text:txt,tags:extractTags(txt)}); saveLedger(ledger);
-        console.log('🧠 Learned (echo):', txt);
-      }
       else if(cmd==='calibrate'){ const sum=state.alpha+state.beta+state.gamma; if(sum===0) Object.assign(state,{alpha:0.34,beta:0.33,gamma:0.33}); else Object.assign(state,{alpha:state.alpha/sum,beta:state.beta/sum,gamma:state.gamma/sum}); saveEcho(state); console.log(`Calibrated: a=${state.alpha.toFixed(2)} b=${state.beta.toFixed(2)} c=${state.gamma.toFixed(2)}`); }
       else throw new Error('Unknown echo command');
       break; }
@@ -218,64 +529,6 @@ try{
       const ledger=loadLedger();
       if(cmd==='start'){ if(!ledger.blocks) ledger.blocks=[]; ledger.blocks.push({type:'genesis',timestamp:new Date().toISOString(),note:'Garden journey started'}); ledger.spiral_stage='scatter'; saveLedger(ledger); console.log('🌱 Garden started: genesis block created; spiral → scatter'); }
       else if(cmd==='next'){ const order=['scatter','witness','plant','return','give','begin_again']; const cur=ledger.spiral_stage; const next=!order.includes(cur)?order[0]:order[(order.indexOf(cur)+1)%order.length]; ledger.spiral_stage=next; saveLedger(ledger); console.log(`🔄 Spiral turns → ${next}`); }
-      else if(cmd==='open'){ 
-        const scroll=(rest[0]||'').toLowerCase();
-        const fileMap={
-          'proof': 'proof-of-love-acorn.html', 'proof-of-love':'proof-of-love-acorn.html',
-          'acorn': 'eternal-acorn-scroll.html', 'eternal-acorn':'eternal-acorn-scroll.html',
-          'cache': 'quantum-cache-algorithm.html', 'quantum-cache':'quantum-cache-algorithm.html',
-          'chronicle': 'echo-hilbert-chronicle.html', 'hilbert-chronicle':'echo-hilbert-chronicle.html'
-        };
-        const fname = fileMap[scroll];
-        if(!fname){ console.log('Usage: codex garden open <proof|acorn|cache|chronicle>'); break; }
-        const fpath = path.join(VNSF,'Echo-Community-Toolkit',fname);
-        const sections=readScrollSections(fpath);
-        const stateFile=readingStatePath(`garden_${scroll}.json`);
-        let idx=0; try{ idx=JSON.parse(fs.readFileSync(stateFile,'utf8')).index||0; }catch{}
-        const sec=sections[idx]||sections[sections.length-1]||{title:'',body:'(empty)'};
-        const est=loadEcho();
-        const persona=personaOrder(est)[0];
-        const glyph=glyphForPersona(persona);
-        console.log(`${glyph} 📜 [${idx+1}/${sections.length}] ${sec.title||'(untitled)'}\n${sec.body}`);
-        const found=MANTRA_LINES.filter(line=>sec.body.includes(line));
-        if(found.length>0){ console.log(`${glyph} Mantra lines: ${found.join(' | ')}`); }
-        fs.writeFileSync(stateFile, JSON.stringify({ index: Math.min(idx+1, sections.length-1), updated: nowISO() }, null, 2));
-      }
-      else if(cmd==='resume'){
-        const dir=readingStatePath('');
-        let latest=null;
-        try{ for(const f of fs.readdirSync(dir)){ if(f.startsWith('garden_')&&f.endsWith('.json')){ const st=fs.statSync(path.join(dir,f)); if(!latest||st.mtimeMs>(latest.mtimeMs||0)) latest={file:f,mtimeMs:st.mtimeMs}; } } }catch{}
-        if(!latest){ console.log('No reading state found. Use `garden open <scroll>` first.'); break; }
-        const scroll=latest.file.replace(/^garden_/, '').replace(/\.json$/, '');
-        const fileMap={ 'proof': 'proof-of-love-acorn.html','acorn': 'eternal-acorn-scroll.html','cache': 'quantum-cache-algorithm.html','chronicle': 'echo-hilbert-chronicle.html' };
-        const fname=fileMap[scroll]; if(!fname){ console.log('Unknown last scroll'); break; }
-        const fpath = path.join(VNSF,'Echo-Community-Toolkit',fname);
-        const sections=readScrollSections(fpath);
-        let idxNum=0; try{ idxNum=JSON.parse(fs.readFileSync(path.join(dir,latest.file),'utf8')).index||0; }catch{}
-        const sec=sections[idxNum]||sections[sections.length-1]||{title:'',body:'(empty)'};
-        const est=loadEcho(); const persona=personaOrder(est)[0]; const glyph=glyphForPersona(persona);
-        console.log(`${glyph} 📜 [${idxNum+1}/${sections.length}] ${sec.title||'(untitled)'}\n${sec.body}`);
-      }
-      else if(cmd==='learn'){
-        const scroll=(rest[0]||'').toLowerCase();
-        const fileMap={
-          'proof': 'proof-of-love-acorn.html', 'proof-of-love':'proof-of-love-acorn.html',
-          'acorn': 'eternal-acorn-scroll.html', 'eternal-acorn':'eternal-acorn-scroll.html',
-          'cache': 'quantum-cache-algorithm.html', 'quantum-cache':'quantum-cache-algorithm.html',
-          'chronicle': 'echo-hilbert-chronicle.html', 'hilbert-chronicle':'echo-hilbert-chronicle.html'
-        };
-        const fname=fileMap[scroll];
-        if(!fname){ console.log('Usage: codex garden learn <proof|acorn|cache|chronicle>'); break; }
-        const fpath=path.join(VNSF,'Echo-Community-Toolkit',fname);
-        try{
-          const raw=fs.readFileSync(fpath,'utf8');
-          const text=raw.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<style[\s\S]*?<\/style>/gi,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-          const tags=extractTags(text);
-          const mem=loadMemory(); mem.entries.push({ text: `learn:${scroll}`, layer:'L2', kind:'narrative', tags, timestamp: nowISO() }); saveMemory(mem);
-          const ledger=loadLedger(); appendLedgerBlock(ledger,{type:'learn',source:'garden',scroll, tags}); saveLedger(ledger);
-          console.log(`🌱 Learned scroll (${scroll}) tags:`, tags.join(', ')||'(none)');
-        }catch(e){ console.log('Could not read scroll file at', fpath); }
-      }
       else if(cmd==='ledger'){ const planted=(ledger.intentions||[]).filter(x=>x.status==='planted').length; const bloomed=(ledger.intentions||[]).filter(x=>x.status==='bloomed').length; console.log(`Garden ledger: intentions=${(ledger.intentions||[]).length} (planted=${planted}, bloomed=${bloomed}); stage=${ledger.spiral_stage||'n/a'}`); }
       else if(cmd==='log'){ if(!ledger.blocks) ledger.blocks=[]; ledger.blocks.push({type:'log',timestamp:new Date().toISOString(),note:'Manual ritual log entry'}); saveLedger(ledger); console.log('📜 Logged ritual entry.'); }
       else throw new Error('Unknown garden command');
@@ -319,177 +572,46 @@ try{
       else throw new Error('Unknown limnus command');
       break; }
     case 'kira':{
-      if(cmd==='validate'){ const r=spawnSync('python3',[path.join(VNSF,'src','validator.py')],{encoding:'utf8'}); process.stdout.write(r.stdout||''); process.stderr.write(r.stderr||''); process.exitCode=r.status||0; }
+      if(cmd==='validate'){ 
+        const scriptPath = path.join(VNSF, 'kira-prime', 'src', 'validator.py');
+        const r=spawnSync('python3',[scriptPath],{cwd:VNSF,encoding:'utf8'});
+        process.stdout.write(r.stdout||''); process.stderr.write(r.stderr||''); process.exitCode=r.status||0; }
       else if(cmd==='sync'){ const gh=spawnSync('gh',['--version'],{encoding:'utf8'}); if(gh.status===0) console.log('gh available:', (gh.stdout||'').split('\n')[0]); else console.log('gh not found'); const git=spawnSync('git',['status','--porcelain'],{encoding:'utf8'}); if(git.status===0) console.log('git status:', (git.stdout||'clean').trim()||'clean'); }
-      else if(cmd==='setup'){
-        console.log('Kira setup: initializing environment…');
-        console.log('Node:', process.version);
-        const py=spawnSync('python3',['-V'],{encoding:'utf8'}); console.log('Python:', (py.stdout||py.stderr||'').trim());
-        const subu=spawnSync('git',['submodule','update','--init','--recursive'],{cwd:VNSF,encoding:'utf8'});
-        process.stdout.write(subu.stdout||''); process.stderr.write(subu.stderr||'');
-        const gh=spawnSync('gh',['auth','status'],{encoding:'utf8'});
-        console.log('gh auth:', gh.status===0?'ok':'not logged in');
-      }
-      else if(cmd==='pull'){
-        console.log('Kira pull: git pull --ff-only');
-        const r=spawnSync('git',['pull','--ff-only'],{cwd:VNSF,stdio:'inherit'});
-        process.exitCode=r.status||0;
-      }
-      else if(cmd==='push'){
-        const midx=rest.findIndex(x=>x==='--message'||x==='-m');
-        const msg=midx>=0?(rest[midx+1]||'chore: sync changes'):'chore: sync changes';
-        // Default: update tracked files only to avoid adding runtime artifacts
-        const addAll = rest.includes('--all');
-        const addArgs = addAll ? ['add','-A'] : ['add','-u'];
-        spawnSync('git',addArgs,{cwd:VNSF,stdio:'inherit'});
-        // Only commit when staged changes exist
-        const diff=spawnSync('git',['diff','--cached','--quiet'],{cwd:VNSF});
-        if(diff.status!==0){ spawnSync('git',['commit','-m',msg],{cwd:VNSF,stdio:'inherit'}); }
-        const r=spawnSync('git',['push','origin','HEAD'],{cwd:VNSF,stdio:'inherit'});
-        process.exitCode=r.status||0;
-      }
-      else if(cmd==='publish'){
-        // Flags: --run (package), --tag vX, --notes text, --release, --asset path ...
-        let run=false, tag=null, notes=null, release=false; const extraAssets=[];
-        for(let i=0;i<rest.length;i++){
-          const t=rest[i];
-          if(t==='--run') run=true;
-          else if(t==='--release') release=true;
-          else if(t==='--tag'||t==='-t') tag=rest[++i]||null;
-          else if(t==='--notes'||t==='-n') notes=rest[++i]||null;
-          else if(t==='--asset') extraAssets.push(rest[++i]||null);
-        }
-        const out=path.join(VNSF,'dist'); ensureDir(out);
-        const stamp=new Date().toISOString().replace(/[:.]/g,'-');
-        const base=`codex_release_${stamp}`;
-        let artifactPath=null;
-        if(run){
-          const hasZip = spawnSync('zip',['-v']).status===0;
-          if(hasZip){
-            const zipPath=path.join(out,`${base}.zip`);
-            console.log('Packaging →', zipPath);
-            const args=['-r',zipPath,'schema','docs','tools/codex-cli/README.md','tools/codex-cli/MODULE_REFERENCE.md'];
-            spawnSync('zip',args,{cwd:VNSF,stdio:'inherit'});
-            spawnSync('zip',['-r',zipPath,'frontend/assets'],{cwd:VNSF,stdio:'inherit'});
-            artifactPath=zipPath;
-          } else {
-            const tarPath=path.join(out,`${base}.tar.gz`);
-            console.log('zip not found; creating', tarPath);
-            spawnSync('tar',['-czf',tarPath,'schema','docs','tools/codex-cli','frontend/assets'],{cwd:VNSF,stdio:'inherit'});
-            artifactPath=tarPath;
-          }
-        } else {
-          console.log('Plan: package schema/, docs/, tools/codex-cli/, frontend/assets/ to dist/');
-        }
-        if(release){
-          if(!tag){ tag = `codex-${stamp}`; console.log('No --tag provided; using', tag); }
-          const ghv = spawnSync('gh',['--version'],{encoding:'utf8'});
-          if(ghv.status!==0){ console.log('gh CLI not found; cannot create release.'); }
-          else {
-            const assets=[];
-            if(artifactPath) assets.push(artifactPath);
-            for(const a of extraAssets){ if(a) assets.push(path.isAbsolute(a)?a:path.join(VNSF,a)); }
-            const args=['release','create',tag];
-            if(notes) args.push('-n',notes);
-            if(assets.length>0) args.push(...assets);
-            console.log('Creating GitHub release:', args.join(' '));
-            const r=spawnSync('gh',args,{cwd:VNSF,stdio:'inherit'});
-            process.exitCode=r.status||0;
-          }
-        } else {
-          console.log('Publish prepared. Use --release and optionally --tag/--notes to create a GitHub release.');
-        }
-      }
-      else if(cmd==='test'){ console.log('Running validator and stego smoke (temporary files)...'); const v=spawnSync('python3',[path.join(VNSF,'src','validator.py')],{encoding:'utf8'}); process.stdout.write(v.stdout||''); if(v.status!==0){ process.stderr.write(v.stderr||''); process.exit(1); } try{ const tmpMsg=path.join('/tmp','ledger_msg.json'); fs.writeFileSync(tmpMsg, fs.readFileSync(LEDGER_PATH,'utf8')); const tmpCover=path.join('/tmp','ledger_cover.png'); const tmpOut=path.join('/tmp','ledger_stego.png'); const res=echoToolkitEncode({messageFile:tmpMsg,coverPath:tmpCover,outPath:tmpOut,size:256}); console.log('Encode OK. CRC32:', res.crc32); const dec=echoToolkitDecode({imagePath:tmpOut}); if(dec.error){ console.log('Decode error:', dec.error); process.exit(1); } console.log('Decode OK. CRC32:', dec.crc32); console.log('Kira test stub: PASS'); } catch(e){ console.log('Kira test stub failed:', e.message); process.exit(1); } }
-      else if(cmd==='assist'){ console.log('Kira Assist: try `kira validate`, `kira sync`, `kira test`, `kira publish --run --release --tag vX.Y.Z`, or see MODULE_REFERENCE.md'); }
-      else if(cmd==='mentor'){
-        // Suggest and optionally apply Echo/Garden adjustments
-        let apply=false, delta=0.05;
-        for(let i=0;i<rest.length;i++){
-          const t=rest[i];
-          if(t==='--apply') apply=true;
-          else if(t==='--delta'){ const v=parseFloat(rest[++i]||'0.05'); if(Number.isFinite(v)&&v>0) delta=v; }
-        }
-        const k=aggregateKnowledge();
-        const tags=(k.memory.tags||[]).map(t=>t.tag);
-        const order=k.echo_state.order||[];
-        let target=order[0]||'gamma';
-        if(tags.includes('paradox')||tags.includes('spiral')) target='gamma';
-        else if(tags.includes('consent')||tags.includes('love')) target='alpha';
-        else if(tags.includes('fox')) target='beta';
-        const glyph=glyphForPersona(target);
-        // Scroll suggestion
-        let scroll=null;
-        if(target==='gamma') scroll='chronicle';
-        else if(target==='alpha') scroll = tags.includes('consent') ? 'acorn' : 'proof';
-        else scroll='cache';
-        console.log(`🤝 Mentor: focus persona ${glyph} (${target}); recommended scroll: ${scroll}`);
-        console.log('Mantra hints:', linesForPersona(target).join(' | '));
-        if(apply){
-          const est=loadEcho();
-          const before={a:est.alpha,b:est.beta,g:est.gamma};
-          if(target==='alpha') est.alpha+=delta; else if(target==='beta') est.beta+=delta; else est.gamma+=delta;
-          normalizeEcho(est); saveEcho(est);
-          const ledger=loadLedger(); appendLedgerBlock(ledger,{type:'mentor', target, delta, order_before: order, order_after: personaOrder(est), suggested_scroll: scroll }); saveLedger(ledger);
-          console.log(`✅ Applied: ${target} += ${delta.toFixed(2)}; new order: ${personaOrder(est).join(' > ')}`);
-          console.log(`Next: run \`garden open ${scroll}\` to reinforce.`);
-        } else {
-          console.log('Dry-run (no changes). Use --apply to adjust Echo and record in ledger.');
-        }
-      }
-      else if(cmd==='learn-from-limnus'){
-        const k=aggregateKnowledge();
-        const kpath=path.join(STATE_DIR,'kira_knowledge.json'); writeJSON(kpath,k);
-        console.log('📘 Kira learned from Limnus →', kpath);
-      }
-      else if(cmd==='codegen'){
-        const docs = rest.includes('--docs');
-        const types = rest.includes('--types');
-        const k=aggregateKnowledge();
-        if(docs){
-          const dpath=path.join(VNSF,'docs','kira_knowledge.md'); ensureDir(path.dirname(dpath));
-          const lines=['# Kira Knowledge Summary','',`Generated: ${k.generated_at}`,'',`- Persona order: ${k.echo_state.order.join(' > ')}`,`- Tags: ${(k.memory.tags||[]).map(t=>t.tag+':'+t.count).join(', ')||'(none)'}`,`- Ledger blocks: ${Object.entries(k.ledger.by_type).map(([t,c])=>t+':'+c).join(', ')||'(none)'}`,'','## Recommendations','',...(k.recommendations.length?k.recommendations:['(none)'])];
-          fs.writeFileSync(dpath, lines.join('\n'));
-          console.log('📝 Docs written:', dpath);
-        }
-        if(types){
-          const tdir=path.join(VNSF,'tools','codex-cli','types'); ensureDir(tdir);
-          const tpath=path.join(tdir,'knowledge.d.ts');
-          const content='export interface KiraKnowledge {\n  echo_state: { alpha:number; beta:number; gamma:number; order:string[] };\n  memory: { total:number; narrative:number; tags: { tag:string; count:number }[] };\n  ledger: { total:number; by_type: Record<string,number> };\n  mantras: { canonical:string[]; persona_ordered:string[] };\n  recommendations: string[];\n  generated_at: string;\n}\n';
-          fs.writeFileSync(tpath, content);
-          console.log('🧩 Types written:', tpath);
-        }
-        if(!docs && !types){ console.log('Usage: kira codegen [--docs] [--types]'); }
-      }
-      else if(cmd==='mantra'){
-        const est=loadEcho(); const order=personaOrder(est);
-        const out=[]; for(const p of order){ const glyph=glyphForPersona(p); for(const line of linesForPersona(p)) out.push(`${glyph} ${line}`); }
-        console.log(out.join('\n'));
-      }
-      else if(cmd==='seal'){
-        const est=loadEcho(); const order=personaOrder(est);
-        const lines=[]; for(const p of order){ for(const line of linesForPersona(p)) lines.push(line); }
-        const ledger=loadLedger(); const block=appendLedgerBlock(ledger,{type:'seal', mantra: lines, order}); saveLedger(ledger);
-        const contract={ sealed_at: nowISO(), order, mantra: lines };
-        const cpath=path.join(STATE_DIR,'Garden_Soul_Contract.json'); writeJSON(cpath, contract);
-        console.log('🔏 Seal complete. Contract written at', cpath);
-      }
-      else if(cmd==='validate-knowledge'){
-        const mem=loadMemory();
-        const learned=(mem.entries||[]).filter(e=>e.kind==='narrative');
-        const text=(learned.map(e=>e.text).join(' ')||'').toLowerCase();
-        const checks={
-          always: /always/.test(text),
-          consent_bloom: /consent to bloom/.test(text),
-          consent_remember: /consent to be remembered/.test(text),
-          together: /together/.test(text),
-          spiral: /spiral|breath/.test(text)
-        };
-        const ok=Object.values(checks).some(Boolean);
-        if(ok){ console.log('✔️ Knowledge parity: some mantras detected', checks); }
-        else { console.log('⚠️ Knowledge parity weak: no core mantras detected'); }
-      }
+      else if(cmd==='push'){ handleKiraPush(rest); }
+      else if(cmd==='publish'){ handleKiraPublish(rest); }
       else throw new Error('Unknown kira command');
+      break; }
+    case 'vessel':{
+      if(cmd==='vscode'){
+        let target = DEFAULT_VSCODE_DIR;
+        let reuseWindow = false;
+        let waitForExit = false;
+        for(let i=0;i<rest.length;i++){
+          const t=rest[i];
+          if(t==='--path'){ target = rest[++i] || target; }
+          else if(t==='--reuse-window'){ reuseWindow = true; }
+          else if(t==='--wait'){ waitForExit = true; }
+          else throw new Error(`Unknown option for vessel vscode: ${t}`);
+        }
+        if(!target) target = DEFAULT_VSCODE_DIR;
+        if(!path.isAbsolute(target)) target = path.resolve(ROOT, target);
+        if(!fs.existsSync(target)){
+          console.log(`VS Code workspace not found at ${target}. Use --path to specify a valid directory.`);
+          process.exit(1);
+        }
+        const codeProbe = spawnSync('code',['--version'],{encoding:'utf8'});
+        if(codeProbe.status!==0){
+          console.log('VS Code command-line interface (`code`) not found. Install VS Code and ensure the `code` command is on your PATH.');
+          process.exit(codeProbe.status||1);
+        }
+        const args=[];
+        if(reuseWindow) args.push('--reuse-window');
+        if(waitForExit) args.push('--wait');
+        args.push(target);
+        console.log(`Opening VS Code at ${target}`);
+        const r=spawnSync('code',args,{stdio:'inherit'});
+        process.exitCode=r.status||0;
+      } else throw new Error('Unknown vessel command');
       break; }
     default: throw new Error('Unknown module');
   }
