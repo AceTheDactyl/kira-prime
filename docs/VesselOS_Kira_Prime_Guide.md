@@ -96,6 +96,7 @@ USER INPUT (Voice/Text)
 ┌───────────────────┐
 │     ROUTING       │
 │ Fixed Sequence:   │
+│ Garden→Echo→      │
 │ DICTATION CAPTURE │
 │  • Parse Intent   │
 │  • Extract Args   │
