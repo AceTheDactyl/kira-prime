@@ -100,6 +100,7 @@ USER INPUT (Voice/Text)
 │ Limnus→Kira       │
 └────────┬──────────┘
          ↓
+         ↓
 ┌───────────────────┐
 │  PRIME SYNTHESIS  │
 │• Validate        │
