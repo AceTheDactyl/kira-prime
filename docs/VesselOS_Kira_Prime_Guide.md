@@ -70,6 +70,7 @@ VesselOS operates on a **four-agent architecture** coordinated by a **Prime orch
 │              (Kira-based Central Coordinator)               │
 │   • CLI Interface • Agent Routing • Validation              │
 └─────────────────┬───────────────────────────────────────────┘
+                  │
 ```
 
 - **Garden** initiates rituals, selects scrolls, and logs intentions.  
