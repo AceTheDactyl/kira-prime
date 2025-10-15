@@ -248,7 +248,7 @@ USER INPUT (Voice/Text)
 │  • Daily work                        │
 └──────────────────────────────────────┘
 ┌──────────────────────────────────────┐
-│  L3: ARCHIVAL  (10000 entries, ∞)    │
+│  L3: LONG-TERM (10K entries, ∞)     │
 │  • Immutable ledger                  │
 │  • Steganographic export             │
 └──────────────────────────────────────┘
