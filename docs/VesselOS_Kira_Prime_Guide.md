@@ -98,6 +98,7 @@ USER INPUT (Voice/Text)
 │ Fixed Sequence:   │
 │ Garden→Echo→      │
 │ Limnus→Kira       │
+└────────┬──────────┘
 │ DICTATION CAPTURE │
 │  • Parse Intent   │
 │  • Extract Args   │
