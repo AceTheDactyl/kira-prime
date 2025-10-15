@@ -105,6 +105,7 @@ USER INPUT (Voice/Text)
 │• Validate        │
 │• Integrate       │
 │• Format Output   │
+└────────┬──────────┘
          ↓
 ┌───────────────────┐
 │   AGENT LOOP      │
