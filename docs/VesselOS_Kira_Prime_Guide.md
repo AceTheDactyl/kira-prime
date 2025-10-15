@@ -105,6 +105,7 @@ USER INPUT (Voice/Text)
 │ Each agent        │
 │ processes intent  │
 │ in its domain     │
+└────────┬──────────┘
 │ DICTATION CAPTURE │
 │  • Parse Intent   │
 │  • Extract Args   │
