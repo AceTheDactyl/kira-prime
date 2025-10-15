@@ -101,6 +101,7 @@ USER INPUT (Voice/Text)
 └────────┬──────────┘
          ↓
 ┌───────────────────┐
+│   AGENT LOOP      │
 │ DICTATION CAPTURE │
 │  • Parse Intent   │
 │  • Extract Args   │
