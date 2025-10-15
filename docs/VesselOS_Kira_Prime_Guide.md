@@ -241,7 +241,7 @@ USER INPUT (Voice/Text)
 │  • Current session data              │
 └──────────────────────────────────────┘
 ┌──────────────────────────────────────┐
-│  L2: LONG-TERM (1000 entries, 1 day) │
+│  L2: MEDIUM-TERM (1K entries, 24h)  │
 │  • Cross-session recall              │
 │  • Narrative motifs                  │
 └──────────────────────────────────────┘
