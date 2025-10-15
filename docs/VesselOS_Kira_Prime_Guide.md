@@ -244,6 +244,7 @@ USER INPUT (Voice/Text)
 │  L2: MEDIUM-TERM (1K entries, 24h)  │
 │  • Cross-session recall              │
 │  • Narrative motifs                  │
+│  • Recent insights                   │
 └──────────────────────────────────────┘
 ┌──────────────────────────────────────┐
 │  L3: ARCHIVAL  (10000 entries, ∞)    │
