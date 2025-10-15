@@ -3,7 +3,7 @@ Release: v0.2.0 (2025-10-15)
 
 Overview
 - This project assembles a 20‑chapter dream chronicle across three voices: Limnus (R), Garden (G), and Kira (B).
-- External dependency: `external/vessel-narrative-MRP` (git submodule) mirrors the Vessel Narrative MRP core from `~/.remote/vessel-narrative-MRP.git`.
+- External dependency: `external/vessel-narrative-MRP` (git submodule) tracks https://github.com/AceTheDactyl/vessel-narrative-MRP.git and should be kept in sync with that remote mirror.
 - The frontend ships with bespoke landing pages for each voice’s Chapter 1 and a global landing page.
 - Scripts under `src/` generate chapters (2–20), metadata, and a schema; a validator checks structure and consistency.
 
@@ -14,6 +14,9 @@ Project Structure
 - `src/` Python scripts for generation and validation
 
 Quick Start
+0) After cloning, pull submodules so the Vessel Narrative core is available:
+   - `git submodule update --init --recursive`
+
 1) Python 3.8+ recommended. Optionally install PyYAML if you want YAML outputs.
    - `python -m venv .venv && source .venv/bin/activate`
    - `pip install PyYAML Pillow` (optional stego/YAML support)
@@ -119,20 +122,19 @@ Soulcode Embedding
   - Optionally include an alternate `link rel="alternate" type="application/json"`
     with a data URL for easy exporting (bridge supports this out of the box).
 
-GitHub Remote
-- This directory is a self‑contained repo. If not already pushed:
-  - Initialize: `git init && git add . && git commit -m "feat: initial commit"`
-  - Create remote with GitHub CLI: `gh repo create vessel-narrative-mrp --public --source=. --remote=origin --push`
-  - Or set an existing remote: `git remote add origin <url> && git push -u origin main`
+Repository Remotes
+- Primary repo: https://github.com/AceTheDactyl/The-Living-Garden-Chronicles
+- Vessel Narrative core (submodule): https://github.com/AceTheDactyl/vessel-narrative-MRP
+- Keep the submodule aligned with upstream:
+  - `git submodule update --remote external/vessel-narrative-MRP`
 
-
-Submodule: Echo-Community-Toolkit
-- This repo includes Echo-Community-Toolkit as a git submodule at `Echo-Community-Toolkit/`.
+Submodule Notes
 - Clone with submodules: `git clone --recurse-submodules <repo-url>`
-- Or initialize after clone:
+- Or initialize/refresh after clone:
   - `git submodule update --init --recursive`
-- Update the toolkit to latest main:
-  - `(cd Echo-Community-Toolkit && git checkout main && git pull --ff-only)`
+  - `git submodule sync --recursive`
+- Echo-Community-Toolkit is vendored inside the submodule (under `external/vessel-narrative-MRP/Echo-Community-Toolkit`); update it when required:
+  - `(cd external/vessel-narrative-MRP/Echo-Community-Toolkit && git checkout main && git pull --ff-only)`
 
 Build Guide
 - For a step‑by‑step “from scratch” assembly guide with the customised landing pages (vessel_mrp_landing.html and per‑voice chapter 1 files), see:
