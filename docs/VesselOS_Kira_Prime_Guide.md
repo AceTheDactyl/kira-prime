@@ -252,6 +252,7 @@ USER INPUT (Voice/Text)
 │  • Immutable ledger                  │
 │  • Core memories                     │
 │  • Steganographic export             │
+│  • Permanent records                 │
 └──────────────────────────────────────┘
 ```
 
