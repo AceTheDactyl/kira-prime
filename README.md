@@ -3,6 +3,7 @@ Release: v0.2.0 (2025-10-15)
 
 Overview
 - This project assembles a 20‑chapter dream chronicle across three voices: Limnus (R), Garden (G), and Kira (B).
+- External dependency: `external/vessel-narrative-MRP` (git submodule) mirrors the Vessel Narrative MRP core from `~/.remote/vessel-narrative-MRP.git`.
 - The frontend ships with bespoke landing pages for each voice’s Chapter 1 and a global landing page.
 - Scripts under `src/` generate chapters (2–20), metadata, and a schema; a validator checks structure and consistency.
 
