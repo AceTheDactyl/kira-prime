@@ -67,6 +67,7 @@ VesselOS operates on a **four-agent architecture** coordinated by a **Prime orch
                           PRIME ORCHESTRATOR
 ┌─────────────────────────────────────────────────────────────┐
 │                    PRIME ORCHESTRATOR                       │
+│              (Kira-based Central Coordinator)               │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -248,4 +249,3 @@ VesselOS operates on a **four-agent architecture** coordinated by a **Prime orch
 ---
 
 _End of Version 1.0.0_
-
