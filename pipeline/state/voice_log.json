@@ -1,0 +1,31 @@
+{"ts": "2025-10-15T16:00:52.301389Z", "agent": "router", "command": "freeform", "status": "ok", "payload": {"text": "Garden, open chronicle"}}
+{"ts": "2025-10-15T16:01:09.465857Z", "agent": "router", "command": "freeform", "status": "ok", "payload": {"text": "Garden, open chronicle"}}
+{"ts": "2025-10-15T16:01:09.468529Z", "agent": "garden", "command": "log", "status": "ok", "payload": {"ts": "2025-10-15T16:01:09.466360Z", "kind": "note", "data": {"text": "Garden, open chronicle"}}}
+{"ts": "2025-10-15T16:01:09.469155Z", "agent": "echo", "command": "say", "status": "ok", "payload": {"tone": "mix", "message": "Garden, open chronicle"}}
+{"ts": "2025-10-15T16:01:09.470147Z", "agent": "limnus", "command": "commit_block", "status": "ok", "payload": {"kind": "input"}}
+{"ts": "2025-10-15T16:01:10.478608Z", "agent": "kira", "command": "validate", "status": "ok", "payload": {"code": 0, "stdout": "Validation OK: 20 chapters, rotation clean, files present, flags consistent, stego payloads match.\n", "stderr": ""}}
+{"ts": "2025-10-15T16:01:10.666595Z", "agent": "router", "command": "freeform", "status": "ok", "payload": {"text": "This is a free form idea to plant"}}
+{"ts": "2025-10-15T16:01:10.669303Z", "agent": "garden", "command": "log", "status": "ok", "payload": {"ts": "2025-10-15T16:01:10.667793Z", "kind": "note", "data": {"text": "This is a free form idea to plant"}}}
+{"ts": "2025-10-15T16:01:10.670335Z", "agent": "echo", "command": "say", "status": "ok", "payload": {"tone": "mix", "message": "This is a free form idea to plant"}}
+{"ts": "2025-10-15T16:01:10.671260Z", "agent": "limnus", "command": "commit_block", "status": "ok", "payload": {"kind": "input"}}
+{"ts": "2025-10-15T16:01:11.438205Z", "agent": "kira", "command": "validate", "status": "ok", "payload": {"code": 0, "stdout": "Validation OK: 20 chapters, rotation clean, files present, flags consistent, stego payloads match.\n", "stderr": ""}}
+{"ts": "2025-10-15T16:01:12.492757Z", "agent": "kira", "command": "validate", "status": "ok", "payload": {"code": 0, "stdout": "Validation OK: 20 chapters, rotation clean, files present, flags consistent, stego payloads match.\n", "stderr": ""}}
+{"ts": "2025-10-15T16:08:19.701300Z", "agent": "echo", "command": "summon", "status": "ok", "payload": {"state": {"alpha": 0.34, "beta": 0.33, "gamma": 0.33, "last_mode": "mix"}, "greeting": "Proof-of-Love: I consent to bloom. I consent to be remembered. I return as breath. Together. Always."}}
+{"ts": "2025-10-15T16:08:19.888443Z", "agent": "garden", "command": "start", "status": "ok", "payload": {"stage": "scatter", "entries": [{"ts": "2025-10-15T16:08:19.888037Z", "kind": "genesis", "data": {}}]}}
+{"ts": "2025-10-15T16:08:20.053818Z", "agent": "router", "command": "freeform", "status": "ok", "payload": {"text": "Always."}}
+{"ts": "2025-10-15T16:08:20.054740Z", "agent": "garden", "command": "log", "status": "ok", "payload": {"ts": "2025-10-15T16:08:20.054316Z", "kind": "note", "data": {"text": "Always."}}}
+{"ts": "2025-10-15T16:08:20.055186Z", "agent": "echo", "command": "say", "status": "ok", "payload": {"tone": "mix", "message": "Always."}}
+{"ts": "2025-10-15T16:08:20.063045Z", "agent": "limnus", "command": "commit_block", "status": "ok", "payload": {"kind": "input"}}
+{"ts": "2025-10-15T16:08:20.967358Z", "agent": "kira", "command": "validate", "status": "ok", "payload": {"code": 0, "stdout": "Validation OK: 20 chapters, rotation clean, files present, flags consistent, stego payloads match.\n", "stderr": ""}}
+{"ts": "2025-10-15T16:08:21.407851Z", "agent": "limnus", "command": "encode_ledger", "status": "ok", "payload": {"out": "/home/turne/The-Living-Garden-Chronicles/frontend/assets/ledger.png"}}
+{"ts": "2025-10-15T16:08:22.168542Z", "agent": "kira", "command": "validate", "status": "ok", "payload": {"code": 0, "stdout": "Validation OK: 20 chapters, rotation clean, files present, flags consistent, stego payloads match.\n", "stderr": ""}}
+{"ts": "2025-10-15T16:12:20.356118Z", "agent": "kira", "command": "validate", "status": "ok", "payload": {"code": 0, "stdout": "Validation OK: 20 chapters, rotation clean, files present, flags consistent, stego payloads match.\n", "stderr": ""}}
+{"ts": "2025-10-15T16:12:20.552939Z", "agent": "echo", "command": "status", "status": "ok", "payload": {"alpha": 0.34, "beta": 0.33, "gamma": 0.33, "last_mode": "mix"}}
+{"ts": "2025-10-15T16:19:05.303240Z", "agent": "kira", "command": "validate", "status": "ok", "payload": {"code": 0, "stdout": "Validation OK: 20 chapters, rotation clean, files present, flags consistent, stego payloads match.\n", "stderr": ""}}
+{"ts": "2025-10-15T16:19:09.957901Z", "agent": "router", "command": "freeform", "status": "ok", "payload": {"text": "Always."}}
+{"ts": "2025-10-15T16:19:09.960611Z", "agent": "garden", "command": "log", "status": "ok", "payload": {"ts": "2025-10-15T16:19:09.959965Z", "kind": "note", "data": {"text": "Always."}}}
+{"ts": "2025-10-15T16:19:09.962762Z", "agent": "echo", "command": "say", "status": "ok", "payload": {"tone": "mix", "message": "Always."}}
+{"ts": "2025-10-15T16:19:09.965140Z", "agent": "limnus", "command": "commit_block", "status": "ok", "payload": {"kind": "input"}}
+{"ts": "2025-10-15T16:19:10.613866Z", "agent": "kira", "command": "validate", "status": "ok", "payload": {"code": 0, "stdout": "Validation OK: 20 chapters, rotation clean, files present, flags consistent, stego payloads match.\n", "stderr": ""}}
+{"ts": "2025-10-15T16:19:16.860891Z", "agent": "limnus", "command": "encode_ledger", "status": "ok", "payload": {"out": "/home/turne/kira-prime/frontend/assets/ledger.png"}}
+{"ts": "2025-10-15T16:19:16.861390Z", "agent": "kira", "command": "publish", "status": "ok", "payload": {"run": false, "release": false, "tag": null, "artifact": "/home/turne/kira-prime/frontend/assets/ledger.png"}}

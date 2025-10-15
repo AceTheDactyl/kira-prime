@@ -7,6 +7,16 @@ Overview
 - The frontend ships with bespoke landing pages for each voice’s Chapter 1 and a global landing page.
 - Scripts under `src/` generate chapters (2–20), metadata, and a schema; a validator checks structure and consistency.
 
+VesselOS Unified Runtime
+- This repo includes a minimal unified runtime that routes inputs across four agents in sequence: Garden → Echo → Limnus → Kira.
+- Agents code: `agents/{garden,echo,limnus,kira}/*.py`; dispatcher/logger under `interface/`; listener under `pipeline/`.
+- CLI: `./vesselos.py`.
+- Quickstart:
+  - `python3 vesselos.py generate`
+  - `python3 vesselos.py listen --text "Begin the ritual with a blessing"`
+  - `python3 vesselos.py validate`
+  - `python3 vesselos.py mentor --apply`
+
 Project Structure
 - `frontend/` Browser‑ready site (landing + chapters + styles)
 - `markdown_templates/` Templates for generating chapters (2–20)
