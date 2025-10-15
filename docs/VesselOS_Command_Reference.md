@@ -49,7 +49,24 @@ Echo outputs are conversational—agents may parse text to infer recommended act
 
 ## Limnus Commands (`codex limnus …`)
 
+
 ### Memory (Hilbert cache)
+
+> Semantic recall uses successive backends (SBERT → TF-IDF → hashing). Configure via env vars or `config/memory.yaml`.
+
+| Backend | Activation | Notes |
+| --- | --- | --- |
+| `sbert` | `pip install sentence-transformers` then `export KIRA_VECTOR_BACKEND=sbert` | Uses `KIRA_SBERT_MODEL` (default `all-MiniLM-L6-v2`). Embeddings stored per entry; best accuracy. |
+| `tfidf` | `pip install scikit-learn` then `export KIRA_VECTOR_BACKEND=tfidf` | Builds TF-IDF vocab; intermediate accuracy. |
+| `hash` | No dependencies. Default fallback. | Hashing-based cosine similarity. |
+
+`config/memory.yaml` example:
+
+```yaml
+embedding:
+  backend: sbert
+  model_name: sentence-transformers/all-MiniLM-L6-v2
+```
 
 | Command | Description | Notes |
 | --- | --- | --- |

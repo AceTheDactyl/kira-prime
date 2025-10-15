@@ -3,12 +3,14 @@
     {
       "text": "paradox brings clarity",
       "layer": "L2",
-      "timestamp": "2025-10-14T21:11:29.000Z"
+      "timestamp": "2025-10-14T21:11:29.000Z",
+      "access_count": 4
     },
     {
       "text": "paradox brings clarity",
       "layer": "L2",
-      "timestamp": "2025-10-14T21:50:11.963Z"
+      "timestamp": "2025-10-14T21:50:11.963Z",
+      "access_count": 4
     },
     {
       "text": "I consent to bloom and be remembered. Together.",
@@ -18,7 +20,8 @@
         "consent",
         "paradox"
       ],
-      "timestamp": "2025-10-15T00:04:00.063Z"
+      "timestamp": "2025-10-15T00:04:00.063Z",
+      "access_count": 2
     },
     {
       "text": "learn:proof",
@@ -28,7 +31,8 @@
         "love",
         "consent"
       ],
-      "timestamp": "2025-10-15T00:04:00.121Z"
+      "timestamp": "2025-10-15T00:04:00.121Z",
+      "access_count": 2
     }
   ]
 }

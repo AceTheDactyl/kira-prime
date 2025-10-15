@@ -8,7 +8,12 @@ Follow these steps to bring the Vessel narrative system online, run a complete g
 
 - **Python** ≥ 3.8 (used by the generators, validator, and stego helpers).
 - **Node.js** ≥ 20 (required for the `codex` CLI).
-- **Git** and **GitHub CLI (`gh`)** if you intend to use Kira’s sync/push/publish flow.
+- **Git** and **GitHub CLI (`gh`)** if you intend to use Kira’s sync/push/publish flow. For semantic recall upgrades, install:
+  ```bash
+  pip install sentence-transformers numpy  # SBERT embeddings
+  # optional TF-IDF fallback
+  pip install scikit-learn
+  ```
 - Ensure submodules are initialised:
   ```bash
   git submodule update --init --recursive

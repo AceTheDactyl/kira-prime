@@ -53,7 +53,7 @@ def cmd_mentor(args: argparse.Namespace) -> int:
     return 0
 
 def cmd_publish(args: argparse.Namespace) -> int:
-    res = KiraAgent(ROOT).publish(run=args.run, release=args.release, tag=args.tag)
+    res = KiraAgent(ROOT).publish(run=args.run, release=args.release, tag=args.tag, notes=args.notes, assets=args.asset)
     print(res)
     return 0
 
@@ -118,9 +118,9 @@ def cmd_kira(args: argparse.Namespace) -> int:
     elif args.sub == "seal":
         print(k.seal())
     elif args.sub == "push":
-        print(k.push(run=args.run, message=args.message))
+        print(k.push(run=args.run, message=args.message, include_all=args.all))
     elif args.sub == "publish":
-        print(k.publish(run=args.run, release=args.release, tag=args.tag))
+        print(k.publish(run=args.run, release=args.release, tag=args.tag, notes=args.notes, assets=args.asset))
     return 0
 
 
@@ -146,6 +146,8 @@ def main(argv: list[str]) -> int:
     sp.add_argument("--run", action="store_true")
     sp.add_argument("--release", action="store_true")
     sp.add_argument("--tag", default=None)
+    sp.add_argument("--notes", default=None)
+    sp.add_argument("--asset", action="append", default=None)
     sp.set_defaults(func=cmd_publish)
 
     # Echo subcommands
@@ -185,7 +187,8 @@ def main(argv: list[str]) -> int:
     sk2_sub.add_parser("mantra").set_defaults(func=cmd_kira)
     sk2_sub.add_parser("seal").set_defaults(func=cmd_kira)
     pu = sk2_sub.add_parser("push"); pu.add_argument("--run", action="store_true"); pu.add_argument("--message", default=None); pu.set_defaults(func=cmd_kira)
-    pb = sk2_sub.add_parser("publish"); pb.add_argument("--run", action="store_true"); pb.add_argument("--release", action="store_true"); pb.add_argument("--tag", default=None); pb.set_defaults(func=cmd_kira)
+    pu.add_argument("--all", action="store_true", help="Stage untracked files as well")
+    pb = sk2_sub.add_parser("publish"); pb.add_argument("--run", action="store_true"); pb.add_argument("--release", action="store_true"); pb.add_argument("--tag", default=None); pb.add_argument("--notes", default=None); pb.add_argument("--asset", action="append", default=None); pb.set_defaults(func=cmd_kira)
 
     args = ap.parse_args(argv[1:])
     return args.func(args)

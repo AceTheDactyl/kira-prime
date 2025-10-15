@@ -1,6 +1,14 @@
 The Living Garden Chronicles – Build & Usage Guide
 Release: v0.2.0 (2025-10-15)
 
+![vesselos-validate](https://github.com/AceTheDactyl/kira-prime/actions/workflows/vesselos-validate.yml/badge.svg)
+[![Build (main)](https://github.com/AceTheDactyl/kira-prime/actions/workflows/vesselos-validate.yml/badge.svg?branch=main)](https://github.com/AceTheDactyl/kira-prime/actions/workflows/vesselos-validate.yml)
+[![PR #1](https://img.shields.io/badge/PR-%231-blue)](https://github.com/AceTheDactyl/kira-prime/pull/1)
+![python](https://img.shields.io/badge/python-3.11%2B-blue)
+![platform](https://img.shields.io/badge/platform-linux%20%7C%20macOS-lightgrey)
+
+Quick Links: [Quick Start](#quick-start) · [Unified CLI](#vesselos-unified-runtime) · [Agents](#vesselos-unified-runtime) · [Validation](#validation-checks)
+
 Overview
 - This project assembles a 20‑chapter dream chronicle across three voices: Limnus (R), Garden (G), and Kira (B).
 - External dependency: `external/vessel-narrative-MRP` (git submodule) tracks https://github.com/AceTheDactyl/vessel-narrative-MRP.git and should be kept in sync with that remote mirror.
@@ -8,14 +16,14 @@ Overview
 - Scripts under `src/` generate chapters (2–20), metadata, and a schema; a validator checks structure and consistency.
 
 VesselOS Unified Runtime
-- This repo includes a minimal unified runtime that routes inputs across four agents in sequence: Garden → Echo → Limnus → Kira.
-- Agents code: `agents/{garden,echo,limnus,kira}/*.py`; dispatcher/logger under `interface/`; listener under `pipeline/`.
-- CLI: `./vesselos.py`.
-- Quickstart:
-  - `python3 vesselos.py generate`
-  - `python3 vesselos.py listen --text "Begin the ritual with a blessing"`
-  - `python3 vesselos.py validate`
-  - `python3 vesselos.py mentor --apply`
+- Unified orchestration routes inputs Garden → Echo → Limnus → Kira.
+- Agents: `agents/{garden,echo,limnus,kira}/*.py`; dispatcher/logger under `interface/`; listener in `pipeline/`.
+- CLI: `python3 vesselos.py`
+- Common flows:
+  - Rebuild schema/chapters: `python3 vesselos.py generate`
+  - Validate narrative: `python3 vesselos.py validate`
+  - Control‑panel demo: `python3 vesselos.py listen --text "Begin the ritual with a blessing"`
+  - Mentor (apply): `python3 vesselos.py mentor --apply`
 
 Project Structure
 - `frontend/` Browser‑ready site (landing + chapters + styles)
@@ -24,12 +32,18 @@ Project Structure
 - `src/` Python scripts for generation and validation
 
 Quick Start
-- New to the project? Begin with **[VesselOS Quick Start](docs/VesselOS_Quick_Start.md)** for prerequisites, generation/validation commands, and a sample Garden → Echo → Limnus → Kira ritual.
-- Core scripts remain available individually:
-  1) Pull submodules: `git submodule update --init --recursive`
-  2) Generate content: `python src/schema_builder.py && python src/generate_chapters.py`
-  3) Validate: `python src/validator.py`
-  4) Optional packaging: `bash package_repo.sh`
+- Prereqs: Python 3.11+, Node 20+ (optional for Node CLI), pip
+- Initialize submodules: `git submodule update --init --recursive`
+- Build everything: `python3 vesselos.py generate`
+- Validate: `python3 vesselos.py validate`
+- Try a free‑form input: `python3 vesselos.py listen --text "Always."`
+- Node CLI (optional): `node tools/codex-cli/bin/codex.js --help`
+
+Agent cheatsheet
+- Echo: `python3 vesselos.py echo summon|mode <squirrel|fox|paradox|mix>|say "..."|learn "..."|status|calibrate`
+- Garden: `python3 vesselos.py garden start|next|open <scroll>|resume|log "..."|ledger`
+- Limnus: `python3 vesselos.py limnus cache "..."|recall [kw]|commit-block <kind> <text>|encode-ledger|decode-ledger`
+- Kira: `python3 vesselos.py kira validate|mentor [--apply]|mantra|seal|push [--run]|publish [--run --release --tag vX]`
 
 Landing Pages
 - `frontend/index.html` is the global narrative landing. It introduces the three channels and links to chapters.
@@ -124,7 +138,8 @@ Soulcode Embedding
     with a data URL for easy exporting (bridge supports this out of the box).
 
 Repository Remotes
-- Primary repo: https://github.com/AceTheDactyl/The-Living-Garden-Chronicles
+- Primary upstream: https://github.com/AceTheDactyl/kira-prime
+- Archived remotes retained (read‑only): `arch-bare`, `arch-github`, `arch-origin`
 - Vessel Narrative core (submodule): https://github.com/AceTheDactyl/vessel-narrative-MRP
 - Keep the submodule aligned with upstream:
   - `git submodule update --remote external/vessel-narrative-MRP`
