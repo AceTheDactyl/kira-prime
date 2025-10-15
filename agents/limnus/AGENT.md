@@ -26,6 +26,12 @@
 - With Echo/Garden: stores “learn” events and tags, persists reading state
 - With Kira: feeds `learn-from-limnus` and `codegen` pipelines
 
+## Runtime Flow
+1. **Ingest Events** – After Echo logs a `learn` or Garden records a ritual, Limnus runs `codex limnus recall|memories` to pull fresh entries and ledger blocks.
+2. **Cache & Hash** – `codex limnus commit-block` appends to `state/garden_ledger.json` while `limnus state|update` normalizes L1/L2/L3 memories and persona tags.
+3. **Encode (Optional)** – When stego is needed, `codex limnus encode-ledger` embeds the ledger snapshot into the designated PNG for archival.
+4. **Publish Snapshot** – Exposes aggregated counts, dominant persona order, and digest info so Kira can validate (`kira learn-from-limnus`, `kira validate`) before looping back to Garden.
+
 ## Knowledge Seeds
 - Track tags: love, consent, spiral, paradox, fox, squirrel, etc.
 - Digest: `ledger_sha256` for parity (verify‑ledger `--digest`)

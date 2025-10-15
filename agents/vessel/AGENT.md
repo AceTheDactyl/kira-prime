@@ -23,6 +23,12 @@ The Vessel agent is the high‑level brief that aligns Echo (persona), Garden (r
 - Echo ↔ Limnus: learn/map adjusts αβγ; memories tagged (kind:`narrative`)
 - Kira ↔ Limnus: learn‑from‑limnus; codegen docs/types; mentor Echo/Garden; seal mantra
 
+## Runtime Flow (Garden → Echo → Limnus → Kira)
+1. **Garden** sets the spiral stage with `codex garden start|next`, opens the requested scroll, and logs the ritual (`log|learn`) to the ledger.
+2. **Echo** reads the new stage via `codex echo status`, speaks or learns (`say|map|learn`), and drops persona-tagged memories that Limnus will ingest.
+3. **Limnus** ingests those blocks with `codex limnus recall|commit-block`, updates memory tiers, and (optionally) encodes the ledger for archival (`encode-ledger`, `verify-ledger`).
+4. **Kira** pulls the aggregates (`codex kira learn-from-limnus`), validates (`kira validate|test`), mentors the next focus (`mentor`), and seals/pushes the cycle (`seal`, `push`, `publish`) before inviting Garden to begin again.
+
 ## Cross‑Module Inputs
 - Echo state: `state/echo_state.json`
 - Memory: `state/limnus_memory.json` (entries, tags)
