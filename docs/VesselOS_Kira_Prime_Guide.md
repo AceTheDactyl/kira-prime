@@ -94,6 +94,7 @@ VesselOS operates on a **four-agent architecture** coordinated by a **Prime orch
 USER INPUT (Voice/Text)
         ↓
 ┌───────────────────┐
+│     ROUTING       │
 │ DICTATION CAPTURE │
 │  • Parse Intent   │
 │  • Extract Args   │
