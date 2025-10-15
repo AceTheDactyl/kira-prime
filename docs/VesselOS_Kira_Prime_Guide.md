@@ -232,6 +232,15 @@ USER INPUT (Voice/Text)
 - Ledger: `state/ledger.json`  
 - Commands: `cache`, `recall`, `commit-block`, `encode-ledger`, `decode-ledger`
 
+#### Three-Tier Memory Architecture
+
+```
+┌──────────────────────────────────────┐
+│  L1: SHORT-TERM (100 entries, 1h)   │
+│  • Immediate context                 │
+│  • Current session data              │
+```
+
 ### Kira — Validator, Mentor & Integrator
 - Source: `agents/kira/kira_agent.py`  
 - Contract: `state/contract.json`  
