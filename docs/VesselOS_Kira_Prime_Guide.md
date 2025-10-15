@@ -250,6 +250,7 @@ USER INPUT (Voice/Text)
 ┌──────────────────────────────────────┐
 │  L3: LONG-TERM (10K entries, ∞)     │
 │  • Immutable ledger                  │
+│  • Core memories                     │
 │  • Steganographic export             │
 └──────────────────────────────────────┘
 ```
