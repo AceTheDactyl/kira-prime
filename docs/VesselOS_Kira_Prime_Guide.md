@@ -76,7 +76,8 @@ VesselOS operates on a **four-agent architecture** coordinated by a **Prime orch
 ▼                   ▼
 ┌──────────────┐    ┌──────────────┐
 │    GARDEN    │    │     ECHO     │
-│  Ritual      │    │  Voice &     │
+│  Ritual      │◄──►│  Voice &     │
+│  Orchestrator│    │  Persona     │
 ```
 
 - **Garden** initiates rituals, selects scrolls, and logs intentions.  
