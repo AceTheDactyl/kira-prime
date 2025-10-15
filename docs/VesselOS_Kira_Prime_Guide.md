@@ -97,6 +97,7 @@ USER INPUT (Voice/Text)
 │ DICTATION CAPTURE │
 │  • Parse Intent   │
 │  • Extract Args   │
+└────────┬──────────┘
 
 - **Garden** initiates rituals, selects scrolls, and logs intentions.  
 - **Echo** modulates persona voice (Squirrel/Fox/Paradox) to narrate responses.  
