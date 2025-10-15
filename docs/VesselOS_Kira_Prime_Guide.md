@@ -245,6 +245,7 @@ USER INPUT (Voice/Text)
 │  • Cross-session recall              │
 │  • Narrative motifs                  │
 │  • Recent insights                   │
+│  • Daily work                        │
 └──────────────────────────────────────┘
 ┌──────────────────────────────────────┐
 │  L3: ARCHIVAL  (10000 entries, ∞)    │
