@@ -30,6 +30,12 @@
 - `garden learn <scroll>` (extract tags; store memory; ledger `learn`)
 - `garden ledger` (summary)
 
+## Dictation Integration
+- **Listener hooks** – Voice cues such as “Garden plant …”, “Garden bloom …”, or “Advance spiral …” are parsed into intents (`garden.plant`, `garden.bloom`, `garden.next`) that the router executes in sequence before Echo responds.
+- **State touched** – Dictation metadata augments `state/garden_ledger.json` with `source:"voice"` markers so Limnus and Kira can distinguish spoken intentions. A copy of each transcript sits in `pipeline/state/voice_log.json` for review.
+- **Automation verbs** – The router maps the intents to existing CLI verbs: `codex garden log` (for “plant/record”), `codex garden next`, `codex garden start`, and, when the user says “show ledger,” `codex garden ledger`. Manual replay is possible via `codex vessel ingest "garden ..."`.
+- **Recovery** – If a bloom is requested with no planted seed, Garden returns the familiar “No seed to bloom. Try: plant '...’” message; the router catches this and keeps the voice log entry flagged until the user replants.
+
 ## Interaction Contracts
 - With Echo: persona glyphs & hints applied to sections
 - With Limnus: append ledger (`log`, `learn`); persist reading state

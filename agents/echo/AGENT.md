@@ -27,6 +27,12 @@
 - `echo learn <text>` (adjust αβγ; add narrative memory; tag extraction)
 - `echo map <concept>` (summarize related memories; persona + mantra hints)
 
+## Dictation Integration
+- **Listener hooks** – Dictation tagged `echo.say` or `echo.learn` triggers the router to call `codex echo say "…"` or `codex echo learn "…"` immediately after Garden logs an intention. A “mode squirrel/fox/paradox” utterance maps to `codex echo mode …`.
+- **State touched** – Echo continues to read/write `state/echo_state.json`, while routed transcripts are appended to `pipeline/state/voice_log.json` with persona suggestions so Limnus and Kira can audit tone changes.
+- **Automation verbs** – Listener + router rely only on published CLI verbs: `echo mode`, `echo say`, `echo learn`, `echo map`. Operators can re-run the same commands, or feed text back into the pipeline via `codex vessel ingest "echo say ..."` during testing.
+- **Post-processing** – After speaking/learning, Echo emits a summary record (`agent:"echo"`) that the router uses to decide whether Limnus should cache it or Kira should validate consent lines.
+
 ## Interaction Contracts
 - With Limnus: reads/writes memories; ledger `learn`/`mentor` blocks
 - With Garden: styles titles/mantras by persona; suggests scroll focus

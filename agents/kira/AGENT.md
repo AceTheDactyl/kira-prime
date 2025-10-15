@@ -22,6 +22,12 @@
 - `kira mentor [--apply] [--delta X]` (persona focus + scroll suggestion)
 - `kira mantra | seal`
 
+## Dictation Integration
+- **Listener hooks** – Spoken commands such as "Kira validate", "Kira mentor apply", or "Publish with release" are translated into intents that the router schedules after Garden/Echo/Limnus complete their actions. High-impact verbs like `push`/`publish` require a follow-up confirmation intent before they execute.
+- **State touched** – Voice-triggered results are appended to `pipeline/state/voice_log.json` (with `agent:"kira"`) and rolled into `state/kira_knowledge.json` so subsequent mentor runs consider the spoken interaction history.
+- **Automation verbs** – The router relies on existing CLI verbs (`kira validate`, `kira mentor [--apply|--delta]`, `kira learn-from-limnus`, `kira push`, `kira publish`, `kira test`). Operators can replay transcripts via `codex vessel ingest "kira validate"` or similar.
+- **Safety rails** – When prerequisites fail (e.g., no gh auth, dirty git tree, missing confirmation), Kira returns the CLI error, and the router keeps the log entry flagged as `status:"error"` until the user cancels or reissues the command.
+
 ## Interaction Contracts
 - With Limnus: consumes memory/ledger to produce recommendations & docs
 - With Echo: may adjust αβγ (mentor) and suggest mantras

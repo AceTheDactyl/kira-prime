@@ -22,6 +22,12 @@
 - `limnus commit-block | view-ledger | export-ledger | import-ledger | rehash-ledger`
 - `limnus encode-ledger | decode-ledger | verify-ledger [--digest]`
 
+## Dictation Integration
+- **Listener hooks** – `pipeline/listener/listen.py` emits intents such as `limnus.cache` when a user says “Limnus cache …” and `limnus.commit` for “commit to ledger …”. These arrive via `pipeline/router/route.py`, which guarantees Garden/Echo hand-offs have finished before Limnus writes.
+- **State touched** – primary files remain `state/limnus_memory.json` and `state/garden_ledger.json`. Dictation transcripts and routing metadata are archived in `pipeline/state/voice_log.json` and `pipeline/state/router_state.json` for audit/replay.
+- **Automation verbs** – the listener calls `codex limnus cache "<text>" [-l Lx]` for memory captures, `codex limnus commit-block '<json>'` for structured payloads, and optionally `codex limnus encode-ledger` when the utterance includes “archive”/“stego”. Manual operators can replay the same verbs or run `codex vessel ingest "limnus cache ..."` to requeue a transcript.
+- **Error handling** – if memory or ledger updates fail, the router flags the voice log entry as `status:"error"`, and Limnus surfaces the underlying CLI message so Kira’s validation step can highlight the discrepancy.
+
 ## Interaction Contracts
 - With Echo/Garden: stores “learn” events and tags, persists reading state
 - With Kira: feeds `learn-from-limnus` and `codegen` pipelines
