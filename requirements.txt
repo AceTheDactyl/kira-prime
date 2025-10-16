@@ -2,3 +2,4 @@ pyyaml
 sentence-transformers>=2.2.0
 numpy>=1.21.0
 torch>=2.0.0  # CPU version is fine
+faiss-cpu ; platform_system == "Linux"

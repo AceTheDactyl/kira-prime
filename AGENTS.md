@@ -1,36 +1,35 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- Agents: `agents/{echo,garden,limnus,kira}/` (core logic per agent).
-- Orchestration: `interface/dispatcher.py`, `pipeline/listener.py`, `interface/logger.py`.
-- Runtime state: `state/` (e.g., `echo_state.json`, `garden_ledger.json`, `limnus_memory.json`, `ledger.json`).
-- Site & metadata: `frontend/`, `schema/`; generators/validators in `src/`.
-- Tools: `tools/codex-cli/` (optional Node CLI), CI in `.github/workflows/`.
+- Core Python agents live under `agents/`, with shared utilities in `interface/`, `pipeline/`, and `src/`.
+- Persisted state, ledgers, and vector artifacts reside in `state/` and `state/vector_store/`; release bundles land in `dist/`.
+- Front-end work sits in `lambda-vite/` (new Vite scaffold) with a legacy viewer under `Echo-Community-Toolkit/lambda-vite/`; docs and roadmaps are under `docs/`.
+- Tests are split between `tests/` (Python/pytest) and `lambda-vite/tests/` (Vitest).
 
-## Build, Test, and Development Commands
-- Generate: `python3 vesselos.py generate` — builds schema, chapters, soulcode bundle.
-- Validate: `python3 vesselos.py validate` — structural + flags + provenance checks.
-- Demo input: `python3 vesselos.py listen --text "Always."` — routes Garden → Echo → Limnus → Kira.
-- Agent namespaces: e.g., `python3 vesselos.py echo mode fox`, `python3 vesselos.py garden log "note"`.
-- Node CLI (optional): `node tools/codex-cli/bin/codex.js --help`.
+## Build, Test, & Development Commands
+- Install deps: `pip install -r requirements.txt` (Linux adds `faiss-cpu`) and `npm ci` inside `lambda-vite/`.
+- Run all Python tests: `python -m pytest -q`.
+- UI build & tests: `npm run build` then `npm test -- --run` within `lambda-vite/`.
+- Release checklist: `./scripts/checklist_phase2.sh` (installs deps, builds FAISS index, runs tests, packages artifacts).
+- Simulate packaging only: `python vesselos.py publish --notes-file CHANGELOG_RELEASE.md`.
 
 ## Coding Style & Naming Conventions
-- Python: 4‑space indent, `snake_case`, small functions, docstrings for non‑trivial code.
-- Node/TS: 2‑space indent, `camelCase`, ESM imports; keep CLI lightweight.
-- HTML/CSS: preserve narrator classes; avoid manual edits to generated chapter markup.
-- JSON/YAML: script‑generated; do not hand‑edit `schema/*` or `frontend/chapter*.html`.
+- Python uses 4-space indentation and snake_case for functions/variables; classes follow CapWords.
+- TypeScript/React favors 2-space indentation, camelCase identifiers, PascalCase components.
+- Keep Markdown and YAML tidy; run `black`, `flake8`, or `eslint/prettier` when touching corresponding files.
 
 ## Testing Guidelines
-- Smoke: `python3 vesselos.py validate` (run locally and in CI).
-- Prefer `pytest`; name tests `test_*.py` under `tests/` (fixtures in `tests/fixtures/`).
-- Stego parity: ensure `frontend/assets/ledger.png|json` matches `state/ledger.json`.
+- Python suites rely on pytest; name files `test_*.py` and prefer descriptive fixture names.
+- Front-end tests use Vitest with files under `lambda-vite/tests/*.test.tsx`.
+- Ensure FAISS-dependent tests skip gracefully by checking `pytest.importorskip("faiss")`.
+- Always run `python -m pytest` before opening a PR; UI changes should include `npm test -- --run`.
 
 ## Commit & Pull Request Guidelines
-- Conventional Commits (e.g., `feat(limnus): encode ledger artifact`), ≤72‑char subject.
-- Include regenerated artifacts with the code that produced them.
-- PRs: describe changes, list commands run (generate, validate, CLI), link issues, add screenshots for UI changes.
+- Follow Conventional Commits (`feat:`, `fix:`, `chore:`). Scope modules where meaningful, e.g., `feat(limnus): add faiss backend`.
+- Each PR should summarize changes, link issues, and attach screenshots for UI updates or paste changelog snippets.
+- Include test evidence (`python -m pytest`, `npm test`) and mention `./scripts/checklist_phase2.sh` runs when relevant.
+- Keep generated artifacts out of commits except when explicitly requested (e.g., release bundles).
 
 ## Security & Configuration Tips
-- Python 3.11+ and Node 20+. Keep secrets in `.env` (gitignored); never commit credentials.
-- Use PNG‑24/32 for LSB artifacts; avoid palette PNG/JPEG.
-- Default orchestration for free‑form input: Garden → Echo → Limnus → Kira.
+- Never commit secrets; use `.env` or GitHub secrets. `kira publish --release` requires `GH_TOKEN` with `repo` scope.
+- The GitHub Actions release workflow (`release.yml`) assumes `node 20` and authenticated `gh`; confirm access before toggling `--release`.

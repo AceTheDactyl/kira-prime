@@ -7,7 +7,7 @@ Release: v0.2.0 (2025-10-15)
 ![python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![platform](https://img.shields.io/badge/platform-linux%20%7C%20macOS-lightgrey)
 
-Quick Links: [Quick Start](#quick-start) · [Unified CLI](#vesselos-unified-runtime) · [Agents](#vesselos-unified-runtime) · [Validation](#validation-checks)
+Quick Links: [Quick Start](#quick-start) · [Unified CLI](#vesselos-unified-runtime) · [Agents](#vesselos-unified-runtime) · [Validation](#validation-checks) · [Feedback – Phase 2](https://github.com/AceTheDactyl/kira-prime/discussions/categories/feedback)
 
 Overview
 - This project assembles a 20‑chapter dream chronicle across three voices: Limnus (R), Garden (G), and Kira (B).
@@ -44,6 +44,7 @@ Quick Start
 - Try a free-form input: `python3 vesselos.py listen --text "Always."`
 - Optional Node CLI: `node tools/codex-cli/bin/codex.js --help`
 - Optional VS Code extension: `(cd vscode-extension && npm install && npm run compile)`
+- Phase 2 one-click prep: `./scripts/checklist_phase2.sh`
 
 Continuous Integration & Local Testing
 - GitHub Actions run two workflows on push/PR:

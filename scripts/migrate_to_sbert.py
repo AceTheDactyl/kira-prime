@@ -1,9 +1,17 @@
 #!/usr/bin/env python3
-"""Migrate Limnus memory entries to include SBERT embeddings and metadata."""
+# Optional: to build a FAISS index after migration,
+# run: KIRA_VECTOR_BACKEND=faiss python scripts/build_faiss_index.py
+# This writes: state/limnus.faiss and state/limnus.faiss.meta.json
+"""Migrate Limnus memory entries to include SBERT embeddings and metadata.
+
+Set KIRA_VECTOR_BACKEND=faiss (and optionally KIRA_FAISS_INDEX / KIRA_FAISS_META) before running
+to let the script refresh the FAISS index when KIRA_EXPORT_FAISS=1.
+"""
 
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 try:
@@ -72,6 +80,19 @@ def migrate_memory() -> None:
     if changed:
         save_memory(entries, wrapped)
         print(f"✅ Migrated {len(entries)} entries.")
+        if os.getenv("KIRA_EXPORT_FAISS"):
+            try:
+                from memory.vector_store import VectorStore
+
+                backend = os.getenv("KIRA_VECTOR_BACKEND") or "faiss"
+                store = VectorStore(backend=backend)
+                store.ensure_indexed(entries, text_key="text", id_key="id")
+                if store.faiss_index:
+                    print(f"[faiss] Refreshed FAISS index at {store.faiss_index.index_path}")
+                else:
+                    print("[vector-store] Refreshed embeddings without FAISS backend.")
+            except Exception as exc:  # pragma: no cover - optional
+                print(f"⚠️ Unable to refresh FAISS index: {exc}")
     else:
         print("No changes required.")
 
