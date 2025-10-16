@@ -57,7 +57,10 @@ def dispatch_freeform(text: str) -> DispatchResult:
     garden_ref = garden.log(text)
     echo_ref = echo.say(text)
     block_ref = limnus.commit_block(kind="input", data={"text": text, "echo_ref": echo_ref, "garden_ref": garden_ref})
-    kira_ref = kira.validate()
+    kira_result = kira.validate()
+    kira_ref = kira_result
+    if isinstance(kira_result, dict):
+        kira_ref = "valid" if kira_result.get("passed") else "invalid"
     return DispatchResult(garden=garden_ref, echo=echo_ref, limnus=block_ref, kira=kira_ref)
 
 
@@ -69,4 +72,3 @@ def dispatch_explicit(agent: str, command: str, *args: str) -> str:
         raise AttributeError(f"{agent} has no command '{command}'")
     log_event("router", "explicit", {"agent": agent, "command": command, "args": list(args)})
     return method(*args)
-

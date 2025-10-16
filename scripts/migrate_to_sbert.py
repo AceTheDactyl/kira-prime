@@ -63,7 +63,11 @@ def migrate_memory() -> None:
             text = entry.get("text", "")
             if text:
                 entry["embedding"] = model.encode(text).tolist()
+                entry["vector"] = list(entry["embedding"])
                 changed = True
+        elif "vector" not in entry or not isinstance(entry["vector"], list):
+            entry["vector"] = list(entry["embedding"])
+            changed = True
 
     if changed:
         save_memory(entries, wrapped)

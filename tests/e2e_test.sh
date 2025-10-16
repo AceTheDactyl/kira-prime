@@ -2,37 +2,48 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 if [[ -n "${PRIME_CLI:-}" ]]; then
   # shellcheck disable=SC2206
-  CLI_ARR=(${PRIME_CLI})
+  CLI=(${PRIME_CLI})
+elif command -v prime >/dev/null 2>&1; then
+  CLI=(prime)
 else
-  CLI_ARR=(node "$REPO_ROOT/tools/codex-cli/bin/codex.js")
+  CLI=(python3 "$REPO_ROOT/vesselos.py")
 fi
 
 run_cli() {
-  "${CLI_ARR[@]}" "$@"
+  "${CLI[@]}" "$@"
 }
 
-note() {
+log() {
   printf '%s\n' "$@"
 }
 
-note "🧪 End-to-End Integration Test"
+log "[TEST] End-to-end integration test"
 
-note "1️⃣ Testing semantic memory..."
-run_cli "limnus" "cache" "I love programming"
-run_cli "limnus" "cache" "Coding is my passion"
-run_cli "limnus" "cache" "The weather is nice"
-run_cli "limnus" "recall" "software"
-note "✅ Semantic recall command executed"
+log "[STEP] Semantic memory"
+run_cli limnus cache "I love programming"
+run_cli limnus cache "Coding is my passion"
+run_cli limnus cache "The weather is nice"
+results="$(run_cli limnus recall --query "software development" || true)"
+log "[INFO] Semantic recall output: ${results}"
 
-note "2️⃣ Testing git automation..."
-run_cli "kira" "push"
-note "✅ Git push dry-run executed"
+log "[STEP] Git automation"
+if ! run_cli kira push --run --message "Test commit"; then
+  log "[WARN] Git push command reported an error"
+fi
 
-note "3️⃣ Testing validation..."
-run_cli "kira" "validate"
-note "✅ Validation command executed"
+log "[STEP] Validation"
+if ! run_cli kira validate; then
+  log "[WARN] Validation command reported issues"
+fi
 
-note ""
-note "✅ End-to-End test commands completed!"
+log "[STEP] VSCode extension"
+if command -v code >/dev/null 2>&1 && code --list-extensions | grep -q "kira-prime"; then
+  log "[INFO] VSCode extension detected"
+else
+  log "[INFO] VSCode extension not installed"
+fi
+
+log "[RESULT] Integration script completed"

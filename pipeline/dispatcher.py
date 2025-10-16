@@ -45,4 +45,3 @@ class Dispatcher:
         status = self.kira.validate()
         self.logger.log("Kira", "validate", {"status": status})
         return {"narrative": narrative, "status": status}
-

@@ -11,6 +11,7 @@ Commands:
   publish    – dry-run publish
 """
 import argparse
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -43,9 +44,12 @@ def cmd_listen(args: argparse.Namespace) -> int:
     return 2
 
 def cmd_validate(args: argparse.Namespace) -> int:
-    status = KiraAgent(ROOT).validate()
-    print(status)
-    return 0 if status == "valid" else 1
+    result = KiraAgent(ROOT).validate()
+    if isinstance(result, dict):
+        print(json.dumps(result, indent=2))
+        return 0 if result.get("passed") else 1
+    print(result)
+    return 0 if result == "valid" else 1
 
 def cmd_mentor(args: argparse.Namespace) -> int:
     res = KiraAgent(ROOT).mentor(apply=args.apply)

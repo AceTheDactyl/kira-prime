@@ -75,3 +75,11 @@ def test_publish_with_release_uses_gh(monkeypatch: pytest.MonkeyPatch, kira_repo
 
     artifacts = list((kira_repo / "dist").glob("codex_release_*"))
     assert artifacts, "Expected packaged artifact in dist/"
+
+
+def test_validate_returns_issue_report(kira_repo: Path) -> None:
+    agent = KiraAgent(kira_repo)
+    result = agent.validate()
+    assert isinstance(result, dict)
+    assert "passed" in result
+    assert isinstance(result["issues"], list)

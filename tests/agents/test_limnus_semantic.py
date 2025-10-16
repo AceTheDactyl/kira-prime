@@ -43,6 +43,9 @@ def test_semantic_recall_prefers_matching_entry(temp_state, monkeypatch):
     first_text = payload["results"][0]["text"]
     assert "vessel" in first_text
     assert "Cons" not in first_text
+    similarity = payload["results"][0]["similarity"]
+    if similarity is not None:
+        assert similarity >= 0.2
 
 
 def test_semantic_recall_fallback_hash_backend(temp_state):
@@ -81,3 +84,21 @@ def test_auto_promote_raises_layer_over_threshold(temp_state):
     status = agent.status()
     assert status["by_layer"]["L1"] == 0
     assert status["by_layer"]["L2"] >= 1 or status["by_layer"]["L3"] >= 1
+
+
+def test_cache_persists_vector_field(temp_state):
+    agent = LimnusAgent(Path(temp_state).resolve())
+    agent.cache("Vector memory", layer="L2")
+
+    if agent.embedding_model is None:
+        pytest.skip("Semantic embedder unavailable; vector persistence not applicable")
+
+    mem_path = Path(temp_state) / "state" / "limnus_memory.json"
+    raw = json.loads(mem_path.read_text(encoding="utf-8"))
+    if isinstance(raw, dict):
+        entries = raw.get("entries", [])
+    else:
+        entries = raw
+    assert entries, "Expected at least one memory entry"
+    vector = entries[0].get("vector")
+    assert isinstance(vector, list) and vector, "Vector embedding should be stored as list"

@@ -63,6 +63,10 @@ class Block:
 
 
 class LimnusAgent:
+    """Memory steward with semantic recall and ledger management."""
+
+    _shared_embedder = None
+    _embedder_error: Optional[str] = None
     def __init__(self, root: Path):
         self.root = root
         self.mem_path = self.root / "state" / "limnus_memory.json"
@@ -110,6 +114,7 @@ class LimnusAgent:
         }
         if embedding is not None:
             entry["embedding"] = embedding
+            entry["vector"] = list(embedding)
         memories.append(entry)
         self._write_memory(memories, wrapped)
         metadata = {"layer": layer, "tags": ",".join(tags)}
@@ -186,6 +191,13 @@ class LimnusAgent:
             }
             for score, vec_entry in fallback_hits:
                 match = lookup.get(vec_entry.id)
+                if match is None:
+                    text = getattr(vec_entry, "text", None)
+                    if text:
+                        for entry in candidates:
+                            if entry.get("text") == text:
+                                match = entry
+                                break
                 if match:
                     semantic_hits.append((score, match))
 
@@ -208,8 +220,9 @@ class LimnusAgent:
         final_results: List[tuple[float, Dict[str, Any]]] = []
         for entry_id, (score, entry) in scored.items():
             similarity = score
-            if query_vec is not None and isinstance(entry.get("embedding"), list):
-                similarity = self._vector_similarity(query_vec, entry["embedding"])
+            entry_vec = self._entry_vector(entry)
+            if query_vec is not None and entry_vec is not None:
+                similarity = self._vector_similarity(query_vec, entry_vec)
             if query_vec is not None and similarity < min_similarity:
                 continue
             entry["access_count"] = entry.get("access_count", 0) + 1
@@ -346,12 +359,20 @@ class LimnusAgent:
     def _load_embedding_model(self):
         if SentenceTransformer is None:
             return None
+        if self.__class__._shared_embedder is not None:
+            return self.__class__._shared_embedder
+        if self.__class__._embedder_error:
+            return None
         model_name = os.getenv("KIRA_SBERT_MODEL", "all-MiniLM-L6-v2")
         try:
-            return SentenceTransformer(model_name)
+            embedder = SentenceTransformer(model_name)
         except Exception as exc:  # pragma: no cover - defensive
-            log_event("limnus", "embedding_model_error", {"error": str(exc)}, status="error")
+            err = str(exc)
+            self.__class__._embedder_error = err
+            log_event("limnus", "embedding_model_error", {"error": err}, status="error")
             return None
+        self.__class__._shared_embedder = embedder
+        return embedder
 
     def _embed(self, text: str) -> Optional[List[float]]:
         if not text or self.embedding_model is None:
@@ -377,7 +398,7 @@ class LimnusAgent:
     ) -> List[tuple[float, Dict[str, Any]]]:
         results: List[tuple[float, Dict[str, Any]]] = []
         for entry in memories:
-            vec = entry.get("embedding")
+            vec = self._entry_vector(entry)
             if not isinstance(vec, list):
                 continue
             score = self._vector_similarity(query_vec, vec)
@@ -413,6 +434,12 @@ class LimnusAgent:
                 embedding = self._embed(entry.get("text", ""))
                 if embedding is not None:
                     entry["embedding"] = embedding
+                    entry["vector"] = list(embedding)
+                    changed = True
+            elif "vector" not in entry or not isinstance(entry["vector"], list):
+                vector = entry.get("embedding")
+                if isinstance(vector, list):
+                    entry["vector"] = list(vector)
                     changed = True
         if changed:
             self._write_memory(memories, wrapped)
@@ -421,6 +448,15 @@ class LimnusAgent:
         if np is not None:
             return float(np.dot(np.asarray(u, dtype=float), np.asarray(v, dtype=float)))
         return float(sum(float(a) * float(b) for a, b in zip(u, v)))
+
+    def _entry_vector(self, entry: Dict[str, Any]) -> Optional[List[float]]:
+        vec = entry.get("embedding")
+        if isinstance(vec, list):
+            return vec
+        vec = entry.get("vector")
+        if isinstance(vec, list):
+            return vec
+        return None
 
     def promote_memory(self, memory_id: str, to_layer: str) -> bool:
         target = (to_layer or DEFAULT_LAYER).upper()

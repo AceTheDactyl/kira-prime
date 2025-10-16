@@ -5,6 +5,7 @@ from __future__ import annotations
 Commands:
 - validate, mentor [--apply], mantra, seal, push, publish
 """
+import hashlib
 import json
 import re
 import subprocess
@@ -70,13 +71,91 @@ class KiraAgent:
     def _sanitize_tag(self, tag: str) -> str:
         return re.sub(r"[^0-9A-Za-z._-]", "-", tag)
 
-    def validate(self) -> str:
-        # Run Python validator (chapters, flags, files, stego)
-        code, out, err = self._run(["python3", "src/validator.py"])
-        payload: Dict[str, Any] = {"code": code, "stdout": out[-600:], "stderr": err[-600:]}
-        status = "ok" if code == 0 else "error"
-        log_event("kira", "validate", payload, status=status)
-        return "valid" if code == 0 else "invalid"
+    def validate(self) -> Dict[str, Any]:
+        """Validate core VesselOS state files and ledgers."""
+
+        issues: List[str] = []
+        required_files = [
+            "state/echo_state.json",
+            "state/garden_ledger.json",
+            "state/limnus_memory.json",
+            "state/contract.json",
+        ]
+
+        for rel_path in required_files:
+            if not (self.root / rel_path).exists():
+                issues.append(f"Missing file: {rel_path}")
+
+        # Prefer hashed Limnus ledger but support garden ledger fallback.
+        ledger_candidates = [
+            self.root / "state" / "ledger.json",
+            self.root / "state" / "garden_ledger.json",
+        ]
+
+        ledger_checked = False
+        for ledger_path in ledger_candidates:
+            if not ledger_path.exists():
+                continue
+            ledger_checked = True
+            try:
+                ledger_data = json.loads(ledger_path.read_text(encoding="utf-8"))
+                if not self._verify_ledger_chain(ledger_data):
+                    issues.append(f"Ledger hash chain broken: {ledger_path.name}")
+            except Exception as exc:  # pragma: no cover - defensive
+                issues.append(f"Ledger validation failed ({ledger_path.name}): {exc}")
+        if not ledger_checked:
+            issues.append("Missing ledger: state/ledger.json")
+
+        # Optionally run the legacy Python validator for narrative parity checks.
+        validator_script = self.root / "src" / "validator.py"
+        if validator_script.exists():
+            code, out, err = self._run(["python3", str(validator_script)])
+            if code != 0:
+                issues.append("validator.py reported issues")
+
+        passed = len(issues) == 0
+        payload: Dict[str, Any] = {"passed": passed, "issues": issues}
+        log_event("kira", "validate", payload, status="ok" if passed else "error")
+        return payload
+
+    def _verify_ledger_chain(self, ledger: Any) -> bool:
+        """Verify hash-chained ledger integrity if hashes are present."""
+        if isinstance(ledger, dict):
+            if isinstance(ledger.get("blocks"), list):
+                blocks = ledger.get("blocks", [])
+            elif isinstance(ledger.get("entries"), list):
+                blocks = ledger.get("entries", [])
+            else:
+                return True
+        elif isinstance(ledger, list):
+            blocks = ledger
+        else:
+            return True
+
+        if not blocks:
+            return True
+
+        if "hash" not in blocks[0]:
+            # Garden ledger entries do not include hashes; treat as already verified.
+            return True
+
+        for idx, block in enumerate(blocks):
+            prev_field = block.get("prev") or block.get("prev_hash") or ""
+            expected_prev = "" if idx == 0 else blocks[idx - 1].get("hash", "")
+            if prev_field != expected_prev:
+                return False
+
+            material = {
+                "ts": block.get("ts"),
+                "kind": block.get("kind"),
+                "data": block.get("data") if "data" in block else block.get("payload"),
+                "prev": prev_field,
+            }
+            digest = hashlib.sha256(json.dumps(material, sort_keys=True).encode("utf-8")).hexdigest()
+            if block.get("hash") != digest:
+                return False
+
+        return True
 
     def mentor(self, apply: bool = False) -> str:
         # Minimal heuristic: recommend stage advance when many notes
@@ -116,12 +195,13 @@ class KiraAgent:
 
     # Publishing helpers
     def push(self, run: bool = False, message: str | None = None, include_all: bool = False) -> str:
-        message = message or "chore: sync changes"
+        message = message or f"Kira: automated commit {datetime.now(timezone.utc).isoformat()}"
         code, changes, has_untracked, ahead, behind, err = self._git_status()
+        stage_all = include_all or has_untracked
         payload: Dict[str, Any] = {
             "dirty": bool(changes),
             "run": run,
-            "include_all": include_all,
+            "include_all": stage_all,
             "ahead": ahead,
             "behind": behind,
             "has_untracked": has_untracked,
@@ -138,7 +218,7 @@ class KiraAgent:
             log_event("kira", "push", payload, status="ok")
             return "dry-run"
         if changes:
-            add_args = ["add", "-A" if include_all else "-u"]
+            add_args = ["add", "-A" if stage_all else "-u"]
             add_code, add_out, add_err = self._git(*add_args)
             if add_code != 0:
                 payload["error"] = add_err or add_out
