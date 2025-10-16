@@ -59,6 +59,7 @@ Echo outputs are conversational—agents may parse text to infer recommended act
 | Backend | Activation | Notes |
 | --- | --- | --- |
 | `sbert` | `pip install sentence-transformers` then `export KIRA_VECTOR_BACKEND=sbert` | Uses `KIRA_SBERT_MODEL` (default `all-MiniLM-L6-v2`). Embeddings stored per entry; best accuracy. |
+| `faiss` | `pip install faiss-cpu numpy` then `export KIRA_VECTOR_BACKEND=faiss` | Persists SBERT embeddings alongside a FAISS index. Configure `KIRA_FAISS_INDEX` / `KIRA_FAISS_META` as needed; falls back to hashing if dependencies are missing. |
 | `tfidf` | `pip install scikit-learn` then `export KIRA_VECTOR_BACKEND=tfidf` | Builds TF-IDF vocab; intermediate accuracy. |
 | `hash` | No dependencies. Default fallback. | Hashing-based cosine similarity. |
 
@@ -79,6 +80,8 @@ embedding:
 | `memories [filters] [--json] [--limit N]` | List memories, optionally filtered by layer or time window. | `--json` emits machine-readable output. |
 | `export-memories [-o file] [filters]` | Write selected entries to JSON. | Default: `state/memories_export.json`. |
 | `import-memories -i file [--replace]` | Merge or replace memory entries from JSON. | Without `--replace`, duplicates are skipped. |
+| `status` | Summarise backend, embedding dimensions, and memory counts (per layer). | Helpful before/after switching vector engines. |
+| `reindex [--backend sbert|faiss]` | Rebuild the semantic index with an optional backend override. | Respects `KIRA_VECTOR_BACKEND`; `--backend` temporarily overrides it. |
 
 ### Ledger (hash chain)
 
@@ -120,7 +123,7 @@ Errors from Python helpers are surfaced clearly (e.g., missing Pillow, cover too
 | --- | --- | --- |
 | `pull [--run]` | `git pull --ff-only` (requires clean tree). | Without `--run` it still executes (historical behaviour)—use cautiously. |
 | `push [--run] [--message "..."] [--all]` | Stage tracked files (`-u` by default), commit if needed, and push to origin. Requires `--run` to proceed. | `--all` stages untracked files; otherwise only tracked changes are updated. Review `git status` first. |
-| `publish [--run] [--release] [--tag vX] [--notes text] [--asset path]` | Generate the latest Limnus ledger artifact, package docs/schema/assets into `dist/`, and optionally create a GitHub release via `gh`. | Without flags it prints the plan. Ensure `gh auth login` first. |
+| `publish [--run] [--release] [--tag vX] [--notes text] [--notes-file path] [--asset path]` | Generate the latest Limnus ledger artifact, package docs/schema/assets into `dist/`, and optionally create a GitHub release via `gh`. | Without flags it prints the plan. For `--release`, supply a `GH_RELEASE_TOKEN` (or `GITHUB_TOKEN`) with `repo` and `workflow` scopes and ensure `gh auth login` succeeds. |
 
 ### Knowledge & guidance
 

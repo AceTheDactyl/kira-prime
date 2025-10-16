@@ -307,6 +307,19 @@ class LimnusAgent:
         log_event("limnus", "decode_ledger", {"src": src})
         return payload
 
+    def reindex(self, backend: Optional[str] = None) -> Dict[str, Any]:
+        """Rebuild the semantic vector index, optionally forcing a backend."""
+        if backend:
+            os.environ["KIRA_VECTOR_BACKEND"] = backend
+        memories, wrapped = self._load_active_memory()
+        requested_backend = os.getenv("KIRA_VECTOR_BACKEND")
+        self.vector_store = VectorStore(backend=requested_backend)
+        self.vector_store.ensure_indexed(memories, id_key="id")
+        self._backfill_embeddings(memories, wrapped)
+        current_status = self.status()
+        log_event("limnus", "reindex", current_status)
+        return {"ok": True, "backend": current_status.get("vector_backend"), "status": current_status}
+
     def _backfill_vector_index(self) -> None:
         """Ensure historic memories are represented in the vector index."""
 

@@ -1,0 +1,155 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag name (e.g., v1.2.0-rc.1)"
+        required: false
+      prerelease:
+        type: boolean
+        default: false
+        description: "Mark as prerelease"
+      dry_run:
+        type: boolean
+        default: false
+        description: "Skip upload (compile only)"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: production
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve release metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.tag }}" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${GITHUB_REF##*/}"
+          fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            DRY_RUN=true
+          else
+            DRY_RUN=false
+          fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.prerelease }}" = "true" ]; then
+            PRERELEASE="--prerelease"
+          else
+            PRERELEASE=""
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "dry_run=${DRY_RUN}" >> "$GITHUB_OUTPUT"
+          echo "prerelease=${PRERELEASE}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install -U pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install faiss-cpu || true
+
+      - name: Run Python tests
+        run: |
+          python -m pytest -q || true
+
+      - name: Build FAISS index (optional)
+        run: |
+          if [ -f scripts/build_faiss_index.py ]; then
+            KIRA_VECTOR_BACKEND=faiss python scripts/build_faiss_index.py || true
+          fi
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Root npm install (optional)
+        run: |
+          if [ -f package.json ]; then npm ci; fi
+
+      - name: Build LambdaStateViewer
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORKSPACE="${GITHUB_WORKSPACE}"
+          if [ -d "${WORKSPACE}/lambda-vite" ]; then
+            UI_PATH="${WORKSPACE}/lambda-vite"
+          elif [ -d "${WORKSPACE}/Echo-Community-Toolkit/lambda-vite" ]; then
+            UI_PATH="${WORKSPACE}/Echo-Community-Toolkit/lambda-vite"
+          else
+            echo "Lambda UI sources not found." >&2
+            exit 1
+          fi
+          cd "$UI_PATH"
+          npm ci
+          npm run build
+          npm test -- --run
+          tar -C dist -czf "${WORKSPACE}/lambda-vite-dist.tar.gz" .
+
+      - name: Package VSCode extension (optional)
+        shell: bash
+        run: |
+          set -e
+          if [ -f vscode-extension/package.json ]; then
+            npm i -g @vscode/vsce
+            pushd vscode-extension
+            npm ci
+            npm run compile || true
+            vsce package
+            VSIX=$(ls *.vsix | head -n1 || true)
+            if [ -n "$VSIX" ]; then
+              echo "VSIX_PATH=$(pwd)/$VSIX" >> "$GITHUB_ENV"
+            fi
+            popd
+          fi
+
+      - name: Assemble changelog
+        run: |
+          python scripts/assemble_changelog.py > CHANGELOG_RELEASE.md
+          cat CHANGELOG_RELEASE.md
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kira-release-${{ steps.meta.outputs.tag }}
+          path: |
+            CHANGELOG_RELEASE.md
+            lambda-vite-dist.tar.gz
+            state/ledger_export.json
+            ${{ env.VSIX_PATH }}
+          if-no-files-found: ignore
+
+      - name: Create GitHub release
+        if: ${{ steps.meta.outputs.dry_run != 'true' }}
+        env:
+          TAG_NAME: ${{ steps.meta.outputs.tag }}
+          PRERELEASE_FLAG: ${{ steps.meta.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          ASSETS="lambda-vite-dist.tar.gz"
+          if [ -n "${VSIX_PATH:-}" ] && [ -f "${VSIX_PATH}" ]; then
+            ASSETS="${ASSETS} ${VSIX_PATH}"
+          fi
+          if [ -f state/ledger_export.json ]; then
+            ASSETS="${ASSETS} state/ledger_export.json"
+          fi
+          gh release create "${TAG_NAME}" --title "Release ${TAG_NAME}" ${PRERELEASE_FLAG} \
+            --notes-file CHANGELOG_RELEASE.md ${ASSETS}

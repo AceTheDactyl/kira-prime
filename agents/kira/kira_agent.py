@@ -248,6 +248,7 @@ class KiraAgent:
         run: bool = False,
         release: bool = False,
         tag: str | None = None,
+        notes_file: str | None = None,
         notes: str | None = None,
         assets: Optional[List[str]] = None,
     ) -> str:
@@ -272,6 +273,7 @@ class KiraAgent:
             "release": release,
             "tag": resolved_tag,
             "assets": [str(p) for p in extra_assets],
+            "notes_file": notes_file,
         }
         if not run:
             log_event("kira", "publish", payload, status="ok")
@@ -333,13 +335,15 @@ class KiraAgent:
         )
         if release:
             notes_args: List[str]
-            if notes:
-                notes_path = Path(notes)
+            if notes_file:
+                notes_path = Path(notes_file)
                 abs_notes = notes_path if notes_path.is_absolute() else self.root / notes_path
                 if abs_notes.exists():
                     notes_args = ["-F", str(abs_notes)]
                 else:
-                    notes_args = ["-n", notes]
+                    notes_args = ["-n", notes_file]
+            elif notes:
+                notes_args = ["-n", notes]
             else:
                 notes_args = ["-F", str(changelog_path)]
             upload_assets = [artifact_path, ledger_path, changelog_path, *extra_assets]

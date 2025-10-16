@@ -277,6 +277,7 @@ function handleKiraPublish(rest){
   let release=false;
   let tag=null;
   let notes=null;
+  let notesFile=null;
   const extraAssets=[];
   for(let i=0;i<rest.length;i++){
     const token = rest[i];
@@ -284,6 +285,7 @@ function handleKiraPublish(rest){
     else if(token==='--release'){ release=true; }
     else if(token==='--tag'||token==='-t'){ tag = rest[++i] || null; }
     else if(token==='--notes'||token==='-n'){ notes = rest[++i] || null; }
+    else if(token==='--notes-file'){ notesFile = rest[++i] || null; }
     else if(token==='--asset'){ extraAssets.push(rest[++i] || null); }
     else {
       console.log(`Unknown option for kira publish: ${token}`);
@@ -319,6 +321,12 @@ function handleKiraPublish(rest){
     if(assetPaths.length>0){
       console.log('Additional assets:');
       assetPaths.forEach(a=>console.log(` - ${safeRel(a)}`));
+    }
+    if(notesFile){
+      const absNotes = path.isAbsolute(notesFile) ? notesFile : path.join(VNSF, notesFile);
+      console.log(`Release notes file: ${safeRel(absNotes)}`);
+    } else if(notes){
+      console.log('Inline release notes provided via --notes flag.');
     }
     console.log('Use --run to build artifacts; add --release to publish via GitHub.');
     logEvent('kira','publish',{run:false, release:false, tag:resolvedTag, assets:assetPaths.map(safeRel)},'ok');
@@ -372,7 +380,18 @@ function handleKiraPublish(rest){
       process.exitCode = ghProbe.status || 1;
       return;
     }
-    const notesInfo = resolveNotesInput(notes);
+    let notesInfo = null;
+    if(notesFile){
+      const abs = path.isAbsolute(notesFile) ? notesFile : path.join(VNSF, notesFile);
+      if(fs.existsSync(abs) && fs.statSync(abs).isFile()){
+        notesInfo = { type:'file', path: abs };
+      } else {
+        console.log(`⚠️ Notes file not found: ${notesFile}; falling back to --notes text if provided.`);
+      }
+    }
+    if(!notesInfo){
+      notesInfo = resolveNotesInput(notes);
+    }
     const assets = uniqueStrings([archivePath, ledgerPath, changelogPath, ...assetPaths]);
     const ghArgs = ['release','create', resolvedTag];
     if(notesInfo){
@@ -402,6 +421,7 @@ function handleKiraPublish(rest){
       changelog: safeRel(changelogPath),
       ledger: safeRel(ledgerPath),
       assets: assets.map(safeRel),
+      notes_source: notesFile ? safeRel(path.isAbsolute(notesFile)?notesFile:path.join(VNSF, notesFile)) : notes ? 'inline' : 'changelog',
       release_url: releaseUrl,
     },'ok');
   } else {
@@ -459,7 +479,7 @@ Modules & commands:
           setup
           pull [--run]
           push [--run] [--message "..."] [--all]
-          publish [--run] [--release] [--tag TAG] [--notes TEXT|FILE] [--asset PATH]
+          publish [--run] [--release] [--tag TAG] [--notes TEXT|FILE] [--notes-file PATH] [--asset PATH]
           test
           assist
 

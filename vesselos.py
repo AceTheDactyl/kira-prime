@@ -57,7 +57,15 @@ def cmd_mentor(args: argparse.Namespace) -> int:
     return 0
 
 def cmd_publish(args: argparse.Namespace) -> int:
-    res = KiraAgent(ROOT).publish(run=args.run, release=args.release, tag=args.tag, notes=args.notes, assets=args.asset)
+    assets = args.asset or []
+    res = KiraAgent(ROOT).publish(
+        run=args.run,
+        release=args.release,
+        tag=args.tag,
+        notes_file=args.notes_file,
+        notes=args.notes,
+        assets=assets,
+    )
     print(res)
     return 0
 
@@ -108,6 +116,10 @@ def cmd_limnus(args: argparse.Namespace) -> int:
         print(l.encode_ledger())
     elif args.sub == "decode-ledger":
         print(l.decode_ledger())
+    elif args.sub == "status":
+        print(json.dumps(l.status(), indent=2))
+    elif args.sub == "reindex":
+        print(json.dumps(l.reindex(backend=args.backend), indent=2))
     return 0
 
 
@@ -124,7 +136,17 @@ def cmd_kira(args: argparse.Namespace) -> int:
     elif args.sub == "push":
         print(k.push(run=args.run, message=args.message, include_all=args.all))
     elif args.sub == "publish":
-        print(k.publish(run=args.run, release=args.release, tag=args.tag, notes=args.notes, assets=args.asset))
+        assets = args.asset or []
+        print(
+            k.publish(
+                run=args.run,
+                release=args.release,
+                tag=args.tag,
+                notes_file=args.notes_file,
+                notes=args.notes,
+                assets=assets,
+            )
+        )
     return 0
 
 
@@ -150,7 +172,8 @@ def main(argv: list[str]) -> int:
     sp.add_argument("--run", action="store_true")
     sp.add_argument("--release", action="store_true")
     sp.add_argument("--tag", default=None)
-    sp.add_argument("--notes", default=None)
+    sp.add_argument("--notes-file", default=None, help="Path to release notes file")
+    sp.add_argument("--notes", default=None, help="Inline release notes text")
     sp.add_argument("--asset", action="append", default=None)
     sp.set_defaults(func=cmd_publish)
 
@@ -182,6 +205,8 @@ def main(argv: list[str]) -> int:
     cb = sl2_sub.add_parser("commit-block"); cb.add_argument("kind"); cb.add_argument("data"); cb.set_defaults(func=cmd_limnus)
     sl2_sub.add_parser("encode-ledger").set_defaults(func=cmd_limnus)
     sl2_sub.add_parser("decode-ledger").set_defaults(func=cmd_limnus)
+    st = sl2_sub.add_parser("status"); st.set_defaults(func=cmd_limnus)
+    ri = sl2_sub.add_parser("reindex"); ri.add_argument("--backend", choices=["sbert", "faiss"], default=None); ri.set_defaults(func=cmd_limnus)
 
     # Kira subcommands
     sk2 = sub.add_parser("kira", help="Kira agent commands")
@@ -192,7 +217,14 @@ def main(argv: list[str]) -> int:
     sk2_sub.add_parser("seal").set_defaults(func=cmd_kira)
     pu = sk2_sub.add_parser("push"); pu.add_argument("--run", action="store_true"); pu.add_argument("--message", default=None); pu.set_defaults(func=cmd_kira)
     pu.add_argument("--all", action="store_true", help="Stage untracked files as well")
-    pb = sk2_sub.add_parser("publish"); pb.add_argument("--run", action="store_true"); pb.add_argument("--release", action="store_true"); pb.add_argument("--tag", default=None); pb.add_argument("--notes", default=None); pb.add_argument("--asset", action="append", default=None); pb.set_defaults(func=cmd_kira)
+    pb = sk2_sub.add_parser("publish")
+    pb.add_argument("--run", action="store_true")
+    pb.add_argument("--release", action="store_true")
+    pb.add_argument("--tag", default=None)
+    pb.add_argument("--notes-file", default=None)
+    pb.add_argument("--notes", default=None)
+    pb.add_argument("--asset", action="append", default=None)
+    pb.set_defaults(func=cmd_kira)
 
     args = ap.parse_args(argv[1:])
     return args.func(args)
