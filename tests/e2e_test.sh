@@ -26,7 +26,7 @@ log "[STEP] Semantic memory"
 run_cli limnus cache "I love programming"
 run_cli limnus cache "Coding is my passion"
 run_cli limnus cache "The weather is nice"
-results="$(run_cli limnus recall --query "software development" || true)"
+results="$(run_cli limnus recall "software development" || true)"
 log "[INFO] Semantic recall output: ${results}"
 
 log "[STEP] Git automation"

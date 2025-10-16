@@ -4,13 +4,13 @@
       "text": "paradox brings clarity",
       "layer": "L2",
       "timestamp": "2025-10-14T21:11:29.000Z",
-      "access_count": 4
+      "access_count": 5
     },
     {
       "text": "paradox brings clarity",
       "layer": "L2",
       "timestamp": "2025-10-14T21:50:11.963Z",
-      "access_count": 4
+      "access_count": 5
     },
     {
       "text": "I consent to bloom and be remembered. Together.",
@@ -21,7 +21,7 @@
         "paradox"
       ],
       "timestamp": "2025-10-15T00:04:00.063Z",
-      "access_count": 2
+      "access_count": 3
     },
     {
       "text": "learn:proof",
@@ -32,7 +32,7 @@
         "consent"
       ],
       "timestamp": "2025-10-15T00:04:00.121Z",
-      "access_count": 2
+      "access_count": 3
     },
     {
       "id": "mem_6c6f10e5",
@@ -62,7 +62,37 @@
       "layer": "L2",
       "tags": [],
       "ttl": 86400,
+      "access_count": 1
+    },
+    {
+      "id": "mem_5a16c716",
+      "ts": "2025-10-16T00:37:27.611457Z",
+      "timestamp": "2025-10-16T00:37:27.611457Z",
+      "text": "I love programming",
+      "layer": "L2",
+      "tags": [],
+      "ttl": 86400,
       "access_count": 0
+    },
+    {
+      "id": "mem_60523e06",
+      "ts": "2025-10-16T00:37:28.103737Z",
+      "timestamp": "2025-10-16T00:37:28.103737Z",
+      "text": "Coding is my passion",
+      "layer": "L2",
+      "tags": [],
+      "ttl": 86400,
+      "access_count": 0
+    },
+    {
+      "id": "mem_8854b606",
+      "ts": "2025-10-16T00:37:28.673575Z",
+      "timestamp": "2025-10-16T00:37:28.673575Z",
+      "text": "The weather is nice",
+      "layer": "L2",
+      "tags": [],
+      "ttl": 86400,
+      "access_count": 1
     }
   ]
 }
