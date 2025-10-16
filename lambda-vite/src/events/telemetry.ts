@@ -1,9 +1,11 @@
-type Listener<T = unknown> = (event: import('../types/telemetry').TelemetryEvent<T>) => void
+import type { TelemetryEvent, TelemetryEventType } from '../types/telemetry'
+
+type Listener<T = unknown> = (event: TelemetryEvent<T>) => void
 
 export class TelemetryBus {
-  private listeners = new Map<string, Set<Listener>>()
+  private listeners = new Map<TelemetryEventType, Set<Listener>>()
 
-  on<T>(type: string, fn: Listener<T>): () => void {
+  on<T>(type: TelemetryEventType, fn: Listener<T>): () => void {
     const set = this.listeners.get(type) ?? new Set<Listener>()
     set.add(fn as Listener)
     this.listeners.set(type, set)
@@ -15,8 +17,8 @@ export class TelemetryBus {
     }
   }
 
-  emit<T>(type: string, payload?: T) {
-    const ev = { type, ts: Date.now(), payload }
+  emit<T>(type: TelemetryEventType, payload?: T) {
+    const ev: TelemetryEvent<T> = { type, ts: Date.now(), payload }
     for (const listener of this.listeners.get(type) ?? []) {
       listener(ev)
     }

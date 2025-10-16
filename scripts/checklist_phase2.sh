@@ -4,22 +4,29 @@ PROJECT_ROOT="$(pwd)"
 
 echo "== Phase 2 Checklist =="
 
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+declare -a PIP_INSTALL_ARGS=()
+if [ -z "${VIRTUAL_ENV:-}" ]; then
+  PIP_INSTALL_ARGS+=(--user)
+fi
+export PIP_BREAK_SYSTEM_PACKAGES=1
+
 echo "[1/6] Python deps"
-python -m pip install -U pip
-if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+"${PYTHON_BIN}" -m pip install "${PIP_INSTALL_ARGS[@]}" -U pip
+if [ -f requirements.txt ]; then "${PYTHON_BIN}" -m pip install "${PIP_INSTALL_ARGS[@]}" -r requirements.txt; fi
 if [[ "$(uname -s)" == "Linux" ]]; then
-  pip install faiss-cpu
+  "${PYTHON_BIN}" -m pip install "${PIP_INSTALL_ARGS[@]}" faiss-cpu
 else
   echo "Non-Linux platform detected; skipping faiss-cpu install."
 fi
 
 echo "[2/6] Tests (Python)"
-python -m pytest -q
+"${PYTHON_BIN}" -m pytest -q
 
 echo "[3/6] Build FAISS index (optional)"
 export KIRA_VECTOR_BACKEND=faiss
 if [ -f scripts/build_faiss_index.py ]; then
-  python scripts/build_faiss_index.py
+  "${PYTHON_BIN}" scripts/build_faiss_index.py
 else
   echo "No FAISS builder script found; skipping."
 fi
@@ -45,11 +52,11 @@ tar -C dist -czf "${PROJECT_ROOT}/lambda-vite-dist.tar.gz" .
 popd >/dev/null
 
 echo "[5/6] Assemble changelog"
-python scripts/assemble_changelog.py > CHANGELOG_RELEASE.md
+"${PYTHON_BIN}" scripts/assemble_changelog.py > CHANGELOG_RELEASE.md
 head -n 20 CHANGELOG_RELEASE.md
 
 echo "[6/6] Package via Kira (JSON + human logs)"
-PYTHONPATH="$(pwd)" python - <<'PY'
+PYTHONPATH="$(pwd)" "${PYTHON_BIN}" - <<'PY'
 from pathlib import Path
 import sys
 

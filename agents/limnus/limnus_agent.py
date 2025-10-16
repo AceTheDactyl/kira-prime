@@ -546,10 +546,12 @@ class LimnusAgent:
         model_name = None
         if self.embedding_model is not None:
             model_name = getattr(self.embedding_model, "__class__", type(self.embedding_model)).__name__
+        embedder_backend = getattr(self.vector_store.embedder, "backend_name", "unknown")
         return {
             "total": len(memories),
             "by_layer": layer_counts,
             "model": model_name or "fallback",
-            "vector_backend": getattr(self.vector_store.embedder, "backend_name", "unknown"),
+            "vector_backend": getattr(self.vector_store, "backend_name", embedder_backend),
+            "embedder_backend": embedder_backend,
             "embedding_dim": embedding_dim,
         }
