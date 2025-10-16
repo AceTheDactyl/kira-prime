@@ -3,6 +3,8 @@
 This manual describes every command exposed by the `codex` CLI (Node 20+). Each module corresponds to an agent in the Vessel architecture. Commands are synchronous, zero-dependency wrappers over Node core and the existing Python tooling.
 
 > Run `node tools/codex-cli/bin/codex.js --help` for a quick list of modules. Optional install: `(cd tools/codex-cli && npm link)` then invoke `codex ...`.
+>
+> Prefer the Python CLI? Every command below is also available via `python3 vesselos.py <agent> <command>`.
 
 ---
 
@@ -73,7 +75,7 @@ embedding:
 | `init` | Ensure Echo state, memory, and ledger exist; probe Python LSB toolkit availability. | Safe to run once per session. |
 | `state` | Print persona weights and counts of L1/L2/L3 memory entries. | Quick snapshot before/after rituals. |
 | `cache "text" [-l L1|L2|L3]` | Store a memory fragment in the specified layer (default L2). | Timestamped automatically. |
-| `recall <keyword> [--layer Lx] [--since ISO] [--until ISO]` | Retrieve the latest matching entry. | Case-insensitive search with time bounds. |
+| `recall "<query>" [--layer Lx] [--since ISO] [--until ISO] [--json]` | Semantic recall across SBERT/TF-IDF/hash backends. | Returns scored matches; `--json` emits machine-readable payloads. |
 | `memories [filters] [--json] [--limit N]` | List memories, optionally filtered by layer or time window. | `--json` emits machine-readable output. |
 | `export-memories [-o file] [filters]` | Write selected entries to JSON. | Default: `state/memories_export.json`. |
 | `import-memories -i file [--replace]` | Merge or replace memory entries from JSON. | Without `--replace`, duplicates are skipped. |
@@ -117,8 +119,8 @@ Errors from Python helpers are surfaced clearly (e.g., missing Pillow, cover too
 | Command | Description | Notes |
 | --- | --- | --- |
 | `pull [--run]` | `git pull --ff-only` (requires clean tree). | Without `--run` it still executes (historical behaviour)—use cautiously. |
-| `push [--run] [--message "..."] [--all]` | Stage tracked files (`-u` by default), commit if needed, and push to origin. Requires `--run` to proceed. | `--all` stages untracked files; otherwise only tracked changes are updated. |
-| `publish [--run] [--release] [--tag vX] [--notes text] [--asset path]` | Package docs/schema/assets into `dist/`. `--run` performs packaging; `--release` creates a GitHub release via `gh`. | Without flags it prints the plan. Ensure `gh auth login` first. |
+| `push [--run] [--message "..."] [--all]` | Stage tracked files (`-u` by default), commit if needed, and push to origin. Requires `--run` to proceed. | `--all` stages untracked files; otherwise only tracked changes are updated. Review `git status` first. |
+| `publish [--run] [--release] [--tag vX] [--notes text] [--asset path]` | Generate the latest Limnus ledger artifact, package docs/schema/assets into `dist/`, and optionally create a GitHub release via `gh`. | Without flags it prints the plan. Ensure `gh auth login` first. |
 
 ### Knowledge & guidance
 

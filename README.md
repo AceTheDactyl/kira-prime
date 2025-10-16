@@ -14,6 +14,9 @@ Overview
 - External dependency: `external/vessel-narrative-MRP` (git submodule) tracks https://github.com/AceTheDactyl/vessel-narrative-MRP.git and should be kept in sync with that remote mirror.
 - The frontend ships with bespoke landing pages for each voice’s Chapter 1 and a global landing page.
 - Scripts under `src/` generate chapters (2–20), metadata, and a schema; a validator checks structure and consistency.
+- Limnus now performs semantic recall via SBERT (with TF-IDF/hash fallbacks) and auto-promotes frequently accessed memories.
+- Kira’s `push`/`publish` commands stage, commit, push, and optionally create GitHub releases—use the `--run` flag with care.
+- A VS Code extension (`vscode-extension/`) surfaces live status, semantic recall, and quick commands directly inside the editor.
 
 VesselOS Unified Runtime
 - Unified orchestration routes inputs Garden → Echo → Limnus → Kira.
@@ -32,28 +35,36 @@ Project Structure
 - `src/` Python scripts for generation and validation
 
 Quick Start
-- Prereqs: Python 3.11+, Node 20+ (optional for Node CLI), pip
+- Prereqs: Python 3.11+, Node 20+ (optional for the legacy Node CLI)
+- Install dependencies: `pip install -r requirements.txt`
 - Initialize submodules: `git submodule update --init --recursive`
+- (Optional) Bootstrap git remotes and .gitignore: `./scripts/setup_git.sh`
 - Build everything: `python3 vesselos.py generate`
 - Validate: `python3 vesselos.py validate`
-- Try a free‑form input: `python3 vesselos.py listen --text "Always."`
-- Node CLI (optional): `node tools/codex-cli/bin/codex.js --help`
+- Try a free-form input: `python3 vesselos.py listen --text "Always."`
+- Optional Node CLI: `node tools/codex-cli/bin/codex.js --help`
+- Optional VS Code extension: `(cd vscode-extension && npm install && npm run compile)`
 
 Continuous Integration & Local Testing
 - GitHub Actions run two workflows on push/PR:
   - `ci.yml` installs Python deps, runs the core pytest suites, and builds the VSCode extension (`npm run compile`).
   - `e2e.yml` drives the CLI smoke script (`tests/e2e_test.sh`) to exercise semantic memory and Kira flows end-to-end.
 - Before opening a PR, run the same checks locally:
-  - Core pytest suites: `python3 -m pytest tests/agents/test_limnus_semantic.py tests/test_kira_git.py -q`
+  - Core pytest suites: `python3 -m pytest tests/agents/test_limnus_semantic.py tests/test_kira_agent.py -q`
   - Extension build: `(cd vscode-extension && npm install && npm run compile)`
-  - End-to-end smoke test: `./tests/e2e_test.sh` (wraps `node tools/codex-cli/bin/codex.js`)
-  - Optional full validator sweep: `python3 vesselos.py validate`
+- End-to-end smoke test: `PRIME_CLI="python3 vesselos.py" ./tests/e2e_test.sh`
+- Optional full validator sweep: `python3 vesselos.py validate`
+
+VS Code Integration
+- Extension sources live in `vscode-extension/` and surface live status, validation, and semantic recall from inside the editor.
+- Build once (or watch) via `npm install` followed by `npm run compile`.
+- Install the generated `.vsix` with `code --install-extension kira-prime-vscode-0.1.0.vsix` or launch in debug mode using `.vscode/launch.json`.
 
 Agent cheatsheet
 - Echo: `python3 vesselos.py echo summon|mode <squirrel|fox|paradox|mix>|say "..."|learn "..."|status|calibrate`
 - Garden: `python3 vesselos.py garden start|next|open <scroll>|resume|log "..."|ledger`
-- Limnus: `python3 vesselos.py limnus cache "..."|recall [kw]|commit-block <kind> <text>|encode-ledger|decode-ledger`
-- Kira: `python3 vesselos.py kira validate|mentor [--apply]|mantra|seal|push [--run]|publish [--run --release --tag vX]`
+- Limnus: `python3 vesselos.py limnus cache "..."|recall "query"` (semantic)|`commit-block <kind> <text>`|`encode-ledger`|`decode-ledger`
+- Kira: `python3 vesselos.py kira validate|mentor [--apply]|mantra|seal|push [--run --message "..."]|publish [--run --release --tag vX]`
 
 Landing Pages
 - `frontend/index.html` is the global narrative landing. It introduces the three channels and links to chapters.

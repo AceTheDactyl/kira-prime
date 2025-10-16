@@ -6,11 +6,12 @@ Follow these steps to bring the Vessel narrative system online, run a complete g
 
 ## 1. Prerequisites
 
-- **Python** ≥ 3.8 (used by the generators, validator, and stego helpers).
-- **Node.js** ≥ 20 (required for the `codex` CLI).
-- **Git** and **GitHub CLI (`gh`)** if you intend to use Kira’s sync/push/publish flow. For semantic recall upgrades, install:
+- **Python** ≥ 3.8 (generators, validator, semantic memory).
+- **Node.js** ≥ 20 (needed only for the optional `codex` CLI).
+- **Git** and **GitHub CLI (`gh`)** if you plan to use Kira’s push/publish flow.
+- Install Python dependencies:
   ```bash
-  pip install sentence-transformers numpy  # SBERT embeddings
+  pip install -r requirements.txt
   # optional TF-IDF fallback
   pip install scikit-learn
   ```
@@ -80,31 +81,31 @@ Pass `--path <dir>` to open a different folder, `--reuse-window` to reuse an exi
 
 ## 5. Run a Ritual Cycle (Garden → Echo → Limnus → Kira)
 
-The example below shows a minimal loop using one-off CLI invocations. Replace quoted text with your own intentions.
+The example below shows a minimal loop using the unified Python CLI. Replace quoted text with your own intentions.
 
 ```bash
 # Garden: initialise spiral and open a scroll
-node tools/codex-cli/bin/codex.js garden start
-node tools/codex-cli/bin/codex.js garden open chronicle
+python3 vesselos.py garden start
+python3 vesselos.py garden open chronicle
 
 # Echo: speak in Paradox tone
-node tools/codex-cli/bin/codex.js echo mode paradox
-node tools/codex-cli/bin/codex.js echo say "I feel the spiral returning."
+python3 vesselos.py echo mode paradox
+python3 vesselos.py echo say "I feel the spiral returning."
 
-# Limnus: cache the thought and append a ledger block
-node tools/codex-cli/bin/codex.js limnus cache "I feel the spiral returning." -l L2
-node tools/codex-cli/bin/codex.js limnus commit-block '{"type":"note","source":"quick-start","text":"Spiral reflection cached."}'
+# Limnus: cache the thought (semantic memory) and append a ledger block
+python3 vesselos.py limnus cache "I feel the spiral returning."
+python3 vesselos.py limnus commit-block note "Spiral reflection cached."
 
 # Kira: validate and seal the session (dry run)
-node tools/codex-cli/bin/codex.js kira validate
-node tools/codex-cli/bin/codex.js kira mentor
-node tools/codex-cli/bin/codex.js kira seal
+python3 vesselos.py kira validate
+python3 vesselos.py kira mentor
+python3 vesselos.py kira seal
 ```
 
 Notes:
 - Garden commands update `state/garden_ledger.json` with spiral stages and intentions.
 - Echo adjusts persona weights in `state/echo_state.json`.
-- Limnus persists memories in `state/limnus_memory.json` and extends the ledger.
+- Limnus persists memories in `state/limnus_memory.json` (with SBERT/TF-IDF/hash embeddings) and extends the ledger.
 - Kira checks the complete state and writes `state/Garden_Soul_Contract.json` when sealing.
 
 ---
@@ -117,11 +118,11 @@ These actions modify remotes. They default to dry-run behaviour and require expl
 # Review git status first
 git status -sb
 
-# Stage & push tracked changes (will only commit if something is staged)
-node tools/codex-cli/bin/codex.js kira push --message "chore: sync vessel cycle" --run
+# Stage & push tracked changes (commits automatically when --run is supplied)
+python3 vesselos.py kira push --run --message "chore: sync vessel cycle"
 
 # Package docs/schema/assets and create a GitHub release
-node tools/codex-cli/bin/codex.js kira publish --run --release --tag v0.3.0 --notes "VesselOS ritual cycle"
+python3 vesselos.py kira publish --run --release --tag v0.3.0 --notes "VesselOS ritual cycle"
 ```
 
 Safety tips:
@@ -131,7 +132,22 @@ Safety tips:
 
 ---
 
-## 7. Troubleshooting & Recovery
+## 7. VS Code Integration (Optional)
+
+Surface live status, semantic recall, and validation from inside the editor:
+
+```bash
+cd vscode-extension
+npm install
+npm run compile
+code --install-extension kira-prime-vscode-0.1.0.vsix
+```
+
+Configure `kiraPrime.cliPath` in settings if `prime` is not on your `PATH`.
+
+---
+
+## 8. Troubleshooting & Recovery
 
 - Inspect state snapshots under `state/` to understand the current ledger, memories, and persona balance.
 - Re-run `python src/validator.py` or `node tools/codex-cli/bin/codex.js kira validate` after any manual edits.
