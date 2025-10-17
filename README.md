@@ -7,7 +7,7 @@ Release: v0.2.0 (2025-10-15)
 ![python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![platform](https://img.shields.io/badge/platform-linux%20%7C%20macOS-lightgrey)
 
-Quick Links: [Quick Start](#quick-start) · [Unified CLI](#vesselos-unified-runtime) · [Agents](#vesselos-unified-runtime) · [Validation](#validation-checks) · [Feedback – Phase 2](https://github.com/AceTheDactyl/kira-prime/discussions/categories/feedback)
+Quick Links: [Quick Start](#quick-start) · [Unified CLI](#vesselos-unified-runtime) · [Agents](#vesselos-unified-runtime) · [Validation](#validation-checks) · [For LLM Agents](#for-llm-agents) · [Feedback – Phase 2](https://github.com/AceTheDactyl/kira-prime/discussions/categories/feedback)
 
 Overview
 - This project assembles a 20‑chapter dream chronicle across three voices: Limnus (R), Garden (G), and Kira (B).
@@ -180,3 +180,44 @@ Build Guide
   - System Diagram & Commands: `docs/SYSTEM_DIAGRAM_API_REFERENCE.md`
   - Agents Index: `agents/README.md`
   - Architecture overview: `docs/Architecture.md`
+
+For LLM Agents
+- Read AGENTS.md first: it is the canonical guide for agents in this repo.
+  - Scope rules: nested AGENTS.md files take precedence for their subtree.
+  - Follow coding style, naming, and testing guidance documented there.
+- Environment setup
+  - Python 3.11+; install deps: `python3 -m pip install -r requirements.txt`.
+  - Optional Node for collab server: `(cd collab-server && npm ci && npm run build)`. 
+  - Optional containers: `docker compose up -d` (Redis/Postgres + collab server).
+- Sync and branch hygiene
+  - Submodules: `bash scripts/sync_external.sh` (runs `git submodule sync`/`update`).
+  - Reconcile with upstream: `git fetch --all --prune --tags` then
+    `git pull --rebase origin main`.
+  - Use feature branches (e.g., `feat/collab-hydration`) and rebase onto `main`.
+  - Push with `git push origin <branch>`; open PRs with test/audit evidence.
+- Test and audit gates
+  - Unit/async tests: `python -m pytest -q` (filter via `-k '<pattern>'`).
+  - Integration ritual: `python scripts/integration_complete.py`.
+  - Workspace audit: `python vesselos.py audit full --workspace integration-test`.
+  - Collab server smoke: `python -m pytest tests/test_collab_server.py` and
+    `(cd collab-server && npm ci && npm run build && npm test -- --run)`.
+- Commit policy (Conventional Commits)
+  - Use scopes aligned to directories (e.g., `feat(collab): ...`, `fix(pipeline): ...`).
+  - Include concise intent and note migrations or new env vars in PRs.
+- Generated artifacts and safety
+  - Do not commit generated outputs: `dist/`, captured logs, coverage artifacts,
+    `workspaces/**` contents, or transient voice logs under `state/`/`pipeline/state/`.
+  - Ledger is append‑only; do not rewrite history without tool support.
+  - Secrets via env only (`REDIS_*`, `POSTGRES_*`, `PORT`); never commit secrets.
+- Push checklist (summary)
+  - `git status` (cleanliness) → `git add <intended files>` →
+    `git commit -m "feat(scope): message"` → `git push origin <branch>`.
+  - If pushing to `main`, ensure tests and audits pass locally first.
+- Files and areas typically safe for agents to modify
+  - Core: `library_core/`, `pipeline/`, `scripts/`, `collab-server/src`, `tests/`.
+  - Avoid editing generated bundles and large binary assets unless requested.
+- References
+  - Canonical agent guide: `AGENTS.md` (root).
+  - Submodules: `external/vessel-narrative-MRP` (and its nested toolkit).
+  - CI expectations: keep top‑level `tests/` green; add/adjust tests when
+    modifying agent logic or dispatcher sequencing.
