@@ -1,35 +1,45 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- Core Python agents live under `agents/`, with shared utilities in `interface/`, `pipeline/`, and `src/`.
-- Persisted state, ledgers, and vector artifacts reside in `state/` and `state/vector_store/`; release bundles land in `dist/`.
-- Front-end work sits in `lambda-vite/` (new Vite scaffold) with a legacy viewer under `Echo-Community-Toolkit/lambda-vite/`; docs and roadmaps are under `docs/`.
-- Tests are split between `tests/` (Python/pytest) and `lambda-vite/tests/` (Vitest).
+- `library_core/` houses Python agents (Garden, Echo, Limnus, Kira), orchestration helpers, dictation pipeline, and workspace utilities. Notables: `agents/`, `orchestration/dispatcher.py` (Garden→Echo→Limnus→Kira loop), `dictation/` (session + MRP bridge), `collab/` (FastAPI server).
+- `pipeline/` contains dispatcher wiring, `intent_parser.py`, and logging glue referenced by the integration suite and audits.
+- `collab-server/` includes the TypeScript/WebSocket service (`src/server.ts`), Node build config, and output `dist/`.
+- `docker-compose.yml` (repo root) orchestrates Redis/Postgres and the collab server container for local dev.
+- `scripts/` provides ops helpers: `integration_complete.py` (12 ritual checkpoints), `run_mrp_cycle.py` (20‑chapter build), `sync_external.sh` (submodule sync), deployment utilities.
+- `tests/` contains pytest suites; additional tests and assets reside in submodules (`echo-community-toolkit/`, `kira-prime/`, `The-Living_Garden-Chronicles/`). Keep CI focused on top‑level `tests/`.
+- Workspace artifacts land under `workspaces/<id>/` (see `logs/`, `state/`, `outputs/`, `collab/events.jsonl`).
 
 ## Build, Test, & Development Commands
-- Install deps: `pip install -r requirements.txt` (Linux adds `faiss-cpu`) and `npm ci` inside `lambda-vite/`.
-- Run all Python tests: `python -m pytest -q`.
-- UI build & tests: `npm run build` then `npm test -- --run` within `lambda-vite/`.
-- Release checklist: `./scripts/checklist_phase2.sh` (installs deps, builds FAISS index, runs tests, packages artifacts).
-- Simulate packaging only: `python vesselos.py publish --notes-file CHANGELOG_RELEASE.md`.
+- `python3 -m pip install --break-system-packages -r requirements.txt` — install core Python deps (pytest, asyncpg, redis, httpx, click).
+- `python scripts/integration_complete.py` — run sequential Garden→Echo→Limnus→Kira checks (ledger/memory, personas, cache, parity).
+- `python vesselos.py audit full --workspace <id>` — run health, ledger, memory, personas, consents, performance audits for a workspace.
+- `python -m pytest -q` — execute unit/async tests; `python -m pytest tests/test_collab_server.py` for a focused collab smoke; `-k "<pattern>"` to filter.
+- `npm ci && npm run build && npm test -- --run` (inside `collab-server/`) — validate the Node/WebSocket stack.
+- `docker compose up -d` — start Redis/Postgres and the collab server using the repo‑root `docker-compose.yml`.
 
 ## Coding Style & Naming Conventions
-- Python uses 4-space indentation and snake_case for functions/variables; classes follow CapWords.
-- TypeScript/React favors 2-space indentation, camelCase identifiers, PascalCase components.
-- Keep Markdown and YAML tidy; run `black`, `flake8`, or `eslint/prettier` when touching corresponding files.
+- Python: 4‑space indentation; snake_case for functions/variables; CapWords for classes. Use `black`/`ruff` if available; keep agent docstrings concise.
+- TypeScript/Node: 2‑space indentation; camelCase variables; PascalCase types; lint with `eslint` + `prettier`. Treat `collab-server/src/server.ts` as the canonical service entry.
+- Markdown/YAML: aligned keys, ≤100‑col soft wrap; prefer lists/tables for rituals.
+- Config: env vars are UPPER_SNAKE_CASE (`REDIS_HOST`, `POSTGRES_PASSWORD`); file keys lower‑kebab (`docker-compose.yml`).
+- Naming: workspace IDs are short slugs (`integration-test`); CLI uses hyphenated flags (`--workspace`).
 
 ## Testing Guidelines
-- Python suites rely on pytest; name files `test_*.py` and prefer descriptive fixture names.
-- Front-end tests use Vitest with files under `lambda-vite/tests/*.test.tsx`.
-- Ensure FAISS-dependent tests skip gracefully by checking `pytest.importorskip("faiss")`.
-- Always run `python -m pytest` before opening a PR; UI changes should include `npm test -- --run`.
+- Framework: `pytest` + `pytest-asyncio`. Name files `test_<area>.py`; add fixtures to spin temp workspaces under `workspaces/`.
+- Integration: `scripts/integration_complete.py` + `python vesselos.py audit full` should be green pre‑merge; attach logs from `workspaces/<id>/logs/` in PRs when relevant.
+- Collab smoke: start `docker compose up -d`, then `python -m pytest tests/test_collab_server.py`; verifies dictation hydration and MRP trigger endpoint.
+- Optional FAISS: guard with `pytest.importorskip("faiss")` for portability. Mark slower checks `@pytest.mark.slow`.
+- Agent changes require tests for ledger hash continuity, persona glyph↔tone mapping, consent capture, and dispatcher sequencing.
 
 ## Commit & Pull Request Guidelines
-- Follow Conventional Commits (`feat:`, `fix:`, `chore:`). Scope modules where meaningful, e.g., `feat(limnus): add faiss backend`.
-- Each PR should summarize changes, link issues, and attach screenshots for UI updates or paste changelog snippets.
-- Include test evidence (`python -m pytest`, `npm test`) and mention `./scripts/checklist_phase2.sh` runs when relevant.
-- Keep generated artifacts out of commits except when explicitly requested (e.g., release bundles).
+- Follow Conventional Commits (e.g., `feat(collab): hydrate workspace events`, `fix(ledger): repair hash chain`); keep scopes aligned with directories touched.
+- PRs should summarize intent, link issues, note dependency changes, and include evidence of `pytest`, integration script, and audit runs. Attach screenshots/log snippets for UI or pipeline output.
+- Avoid committing generated artifacts (`dist`, coverage, captured logs) unless explicitly requested; ensure submodules are synchronized via `scripts/sync_external.sh` prior to review.
+- Highlight migration steps (e.g., new environment variables, schema upgrades) in PR descriptions so operators can replicate deployments without surprises.
 
-## Security & Configuration Tips
-- Never commit secrets; use `.env` or GitHub secrets. `kira publish --release` requires `GH_TOKEN` with `repo` scope.
-- The GitHub Actions release workflow (`release.yml`) assumes `node 20` and authenticated `gh`; confirm access before toggling `--release`.
+## Architecture & Security Notes
+- Flow: Garden→Echo→Limnus→Kira via `library_core/orchestration/dispatcher.py`. Collab events are brokered by `library_core/collab/server.py` and mirrored to `workspaces/<id>/collab/events.jsonl`.
+- Submodules: this repo integrates `echo-community-toolkit/`, `kira-prime/`, `The-Living_Garden-Chronicles/`, `vessel-narrative-MRP/`. Keep them synced (`scripts/sync_external.sh`).
+- Secrets: use env vars or ignored `.env.local`. The stack reads `REDIS_*`, `POSTGRES_*`, and `PORT`. Override defaults via `docker-compose.yml` or process env.
+- Validation: post‑deploy, run `python vesselos.py audit full --workspace <id>` to verify hydration, ledger integrity, persona normalization, and consent capture.
+- Ledger: treat as append‑only; rehash only with tool support; maintain chain continuity. Back up `workspaces/<id>/state/` and `outputs/` regularly.
