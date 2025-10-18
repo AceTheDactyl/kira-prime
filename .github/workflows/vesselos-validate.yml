@@ -2,12 +2,8 @@ name: vesselos-validate
 
 on:
   pull_request:
-    paths:
-      - 'kira-prime/**'
   push:
     branches: [ main ]
-    paths:
-      - 'kira-prime/**'
 
 jobs:
   validate:
@@ -23,18 +19,26 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Upgrade pip
-        run: python3 -m pip install --upgrade pip
+      - name: Install Python deps
+        run: |
+          python3 -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Generate narrative (schema + chapters)
-        working-directory: kira-prime
-        run: python3 vesselos.py generate
+      - name: Run unit tests
+        run: python3 -m pytest -q
 
-      - name: Validate narrative
-        working-directory: kira-prime
-        run: python3 vesselos.py validate
+      - name: Integration suite (Garden→Echo→Limnus→Kira)
+        run: python3 scripts/integration_complete.py
 
-      - name: Control panel smoke (freeform input)
-        working-directory: kira-prime
-        run: python3 vesselos.py listen --text "Always."
+      - name: Workspace audit
+        run: python3 vesselos.py audit full --workspace ci-validate
 
+      - name: Upload audit logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-validate-logs
+          path: |
+            workspaces/ci-validate/logs/**
+            workspaces/ci-validate/state/**
+          if-no-files-found: ignore
