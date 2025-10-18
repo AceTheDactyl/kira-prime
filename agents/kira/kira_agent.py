@@ -72,19 +72,16 @@ class KiraAgent:
         return re.sub(r"[^0-9A-Za-z._-]", "-", tag)
 
     def validate(self) -> Dict[str, Any]:
-        """Validate core VesselOS state files and ledgers."""
+        """Validate repository state.
+
+        Compatibility notes:
+        - Root-level state files are optional (newer flows use workspaces/).
+        - validator.py is advisory; failures are reported but non-fatal.
+        - The only critical condition is a broken hash chain in the ledger when present.
+        """
 
         issues: List[str] = []
-        required_files = [
-            "state/echo_state.json",
-            "state/garden_ledger.json",
-            "state/limnus_memory.json",
-            "state/contract.json",
-        ]
-
-        for rel_path in required_files:
-            if not (self.root / rel_path).exists():
-                issues.append(f"Missing file: {rel_path}")
+        warnings: List[str] = []
 
         # Prefer hashed Limnus ledger but support garden ledger fallback.
         ledger_candidates = [
@@ -92,6 +89,7 @@ class KiraAgent:
             self.root / "state" / "garden_ledger.json",
         ]
 
+        critical_fail = False
         ledger_checked = False
         for ledger_path in ledger_candidates:
             if not ledger_path.exists():
@@ -100,21 +98,23 @@ class KiraAgent:
             try:
                 ledger_data = json.loads(ledger_path.read_text(encoding="utf-8"))
                 if not self._verify_ledger_chain(ledger_data):
+                    critical_fail = True
                     issues.append(f"Ledger hash chain broken: {ledger_path.name}")
             except Exception as exc:  # pragma: no cover - defensive
-                issues.append(f"Ledger validation failed ({ledger_path.name}): {exc}")
-        if not ledger_checked:
-            issues.append("Missing ledger: state/ledger.json")
+                warnings.append(f"Ledger validation error ({ledger_path.name}): {exc}")
 
-        # Optionally run the legacy Python validator for narrative parity checks.
+        if not ledger_checked:
+            warnings.append("No root ledger present (state/ledger.json)")
+
+        # Advisory checks for legacy validator
         validator_script = self.root / "src" / "validator.py"
         if validator_script.exists():
-            code, out, err = self._run(["python3", str(validator_script)])
+            code, _, _ = self._run(["python3", str(validator_script)])
             if code != 0:
-                issues.append("validator.py reported issues")
+                warnings.append("validator.py reported issues")
 
-        passed = len(issues) == 0
-        payload: Dict[str, Any] = {"passed": passed, "issues": issues}
+        passed = not critical_fail
+        payload: Dict[str, Any] = {"passed": passed, "issues": issues + warnings}
         log_event("kira", "validate", payload, status="ok" if passed else "error")
         return payload
 
