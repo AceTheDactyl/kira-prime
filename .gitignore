@@ -27,3 +27,7 @@ frontend/*.html
 workspaces/**
 pipeline/state/voice_log.json
 state/voice_log.json
+
+# Logs and coverage
+*.log
+coverage/

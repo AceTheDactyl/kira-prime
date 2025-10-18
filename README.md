@@ -7,7 +7,7 @@ Release: v0.2.0 (2025-10-15)
 ![python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![platform](https://img.shields.io/badge/platform-linux%20%7C%20macOS-lightgrey)
 
-Quick Links: [Quick Start](#quick-start) · [Unified CLI](#vesselos-unified-runtime) · [Agents](#vesselos-unified-runtime) · [Validation](#validation-checks) · [For LLM Agents](#for-llm-agents) · [Feedback – Phase 2](https://github.com/AceTheDactyl/kira-prime/discussions/categories/feedback)
+Quick Links: [Quick Start](#quick-start) · [Unified CLI](#vesselos-unified-runtime) · [Agents](#vesselos-unified-runtime) · [Validation](#validation-checks) · [Collab Server](#collab-server) · [Docker Stack](#docker-stack) · [For LLM Agents](#for-llm-agents) · [Feedback – Phase 2](https://github.com/AceTheDactyl/kira-prime/discussions/categories/feedback)
 
 Overview
 - This project assembles a 20‑chapter dream chronicle across three voices: Limnus (R), Garden (G), and Kira (B).
@@ -45,6 +45,22 @@ Quick Start
 - Optional Node CLI: `node tools/codex-cli/bin/codex.js --help`
 - Optional VS Code extension: `(cd vscode-extension && npm install && npm run compile)`
 - Phase 2 one-click prep: `./scripts/checklist_phase2.sh`
+
+Collab Server
+- Service: minimal Node/TypeScript WebSocket server with `/health` and `ws://.../ws` echo.
+- Build: `(cd collab-server && npm ci && npm run build)`
+- Run locally: `(cd collab-server && npm start)` then open `http://localhost:8000/health`.
+- Smoke test (optional): `COLLAB_SMOKE_ENABLED=1 python -m pytest tests/test_collab_server.py -q`
+- Environment:
+  - `PORT` (default `8000`)
+  - `COLLAB_REDIS_URL` (default `redis://localhost:6379/0`)
+  - `COLLAB_POSTGRES_DSN` (default `postgresql://vesselos:password@localhost:5432/vesselos_collab`)
+
+Docker Stack
+- Compose services: Redis, Postgres, and the collab server container.
+- Start: `docker compose up -d`
+- Health check: `curl http://localhost:8000/health` → `{ "status": "ok" }`
+- Stop: `docker compose down -v` (removes volumes)
 
 Continuous Integration & Local Testing
 - GitHub Actions run two workflows on push/PR:
