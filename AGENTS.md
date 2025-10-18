@@ -15,6 +15,12 @@
 - Collab server: `(cd collab-server && npm ci && npm run build && npm test -- --run)`
 - Docker stack: `docker compose up -d` (Redis, Postgres, collab-server)
 
+## VesselOS Agent Commands
+- Garden: `python3 vesselos.py garden start|next|open <scroll> [--prev|--reset]|resume|log "<text>"|ledger`
+- Echo: `python3 vesselos.py echo summon|mode <tone>|say "<message>"|learn "<text>"|status|calibrate`
+- Limnus: `python3 vesselos.py limnus cache "<text>"|recall "<query>"|commit-block <kind> <data>|encode-ledger|decode-ledger|status|reindex [--backend sbert|faiss]`
+- Kira: `python3 vesselos.py kira validate|mentor [--apply]|mantra|seal|push [--run --message "..."]|publish [--run --release --tag vX.Y.Z --notes-file <file> --asset <path>]`
+
 ## Coding Style & Naming Conventions
 - Python: 4‑space indent; snake_case; CapWords for classes. Prefer `black`/`ruff`.
 - TypeScript: 2‑space indent; camelCase; PascalCase types. Prefer `eslint` + `prettier`.
@@ -33,3 +39,20 @@
 ## Security & Configuration Tips
 - Secrets via env only; never commit credentials. Override defaults with `docker-compose.yml` or process env.
 - Ledger is append‑only; maintain chain continuity; back up `workspaces/<id>/state/` and `outputs/`.
+
+## Release Process
+- Preconditions
+  - Ensure CI is green: `CI`, `compose-smoke`, and `vesselos-validate` jobs.
+  - Locally verify: `python -m pytest -q`, `python scripts/integration_complete.py`, and `python vesselos.py audit full --workspace integration-test`.
+- Version and notes
+  - Bump README “Release” line (e.g., `v0.3.2`).
+  - Generate changelog: `python scripts/assemble_changelog.py > CHANGELOG_RELEASE.md` (include in PR).
+- Tag and publish
+  - Create tag: `git tag -a vX.Y.Z -m "Release vX.Y.Z" && git push origin vX.Y.Z`.
+  - Release workflow (`.github/workflows/release.yml`) runs on tags `v*` and attaches artifacts (lambda-vite dist, VSIX if present, ledger export if available).
+- PR hygiene
+  - Open `chore/readme-vX.Y.Z` with README bump + `CHANGELOG_RELEASE.md`; link the tag and list highlights.
+  - Require green checks before merge (branch protection).
+- Post‑release
+  - Announce changes and link artifacts; verify `docker compose up -d` + `curl :8000/health` works on fresh clone.
+  - For hotfixes: branch from last tag, apply fix, repeat tests, tag `vX.Y.Z+1`.
