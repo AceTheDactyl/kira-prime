@@ -30,6 +30,9 @@ jobs:
       - name: Integration suite (Garden→Echo→Limnus→Kira)
         run: python3 scripts/integration_complete.py
 
+      - name: CLI validation (exit code must be 0)
+        run: python3 vesselos.py validate
+
       - name: Workspace audit
         run: python3 vesselos.py audit full --workspace ci-validate
 
