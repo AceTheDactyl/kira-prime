@@ -22,3 +22,8 @@ frontend/*.html
 !frontend/limnus_ch1.html
 !frontend/garden_ch1.html
 !frontend/kira_ch1.html
+
+# Workspaces and transient voice logs
+workspaces/**
+pipeline/state/voice_log.json
+state/voice_log.json
