@@ -31,11 +31,11 @@ jobs:
           pip install pytest
 
       - name: Run Python tests
-        run: pytest -q
+        run: python -m pytest -q
 
-      - name: Kira integrity validation
+      - name: Run Kira integrity tests
         run: |
-          python3 vesselos.py kira validate
+          python3 vesselos.py kira test
 
       - name: Full system audit (non-blocking)
         run: |
