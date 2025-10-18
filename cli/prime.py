@@ -130,6 +130,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_kira_publish.add_argument("--asset", action="append", default=None)
     p_kira_publish.set_defaults(handler=_handle_kira, action="publish")
 
+    p_kira_codegen = kira_sub.add_parser("codegen", help="Generate knowledge docs and types")
+    p_kira_codegen.add_argument("--docs", action="store_true", help="Emit docs/kira_knowledge.md")
+    p_kira_codegen.add_argument("--types", action="store_true", help="Emit TypeScript type definitions")
+    p_kira_codegen.set_defaults(handler=_handle_kira, action="codegen")
+
     return parser
 
 
@@ -215,6 +220,8 @@ def _handle_kira(args: argparse.Namespace) -> CommandOutput:
         notes_file=getattr(args, "notes_file", None),
         notes=getattr(args, "notes", None),
         assets=assets,
+        docs=getattr(args, "docs", False),
+        types=getattr(args, "types", False),
     )
 
 
@@ -256,4 +263,3 @@ def _plugin_config_path() -> Optional[Path]:
 
 if __name__ == "__main__":
     sys.exit(main())
-
