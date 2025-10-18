@@ -287,6 +287,8 @@ def kira_command(
     notes_file: Optional[str] = None,
     notes: Optional[str] = None,
     assets: Optional[Iterable[str]] = None,
+    docs: bool = False,
+    types: bool = False,
 ) -> CommandOutput:
     agent = KiraAgent(ROOT)
     if action == "validate":
@@ -315,6 +317,8 @@ def kira_command(
             notes=notes,
             assets=payload_assets,
         )
+    elif action == "codegen":
+        result = agent.codegen(docs=docs, types=types)
     else:
         raise ValueError(f"Unknown Kira action: {action}")
     payload = {"agent": "kira", "action": action, "result": result}
@@ -397,4 +401,3 @@ def _read_json(path: Path) -> Optional[Dict[str, Any]]:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:  # pragma: no cover - defensive
         return None
-

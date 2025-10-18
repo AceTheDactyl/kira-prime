@@ -358,3 +358,84 @@ class KiraAgent:
             return "published"
         log_event("kira", "publish", payload, status="warn")
         return "packaged"
+
+    # ------------------------------------------------------------------ codegen
+    def codegen(self, *, docs: bool = False, types: bool = False) -> str:
+        """Generate documentation and type artifacts for release notes.
+
+        - docs: writes docs/kira_knowledge.md summarizing key state.
+        - types: writes docs/kira_types.d.ts defining minimal TS types.
+        """
+        generated: list[str] = []
+        docs_dir = self.root / "docs"
+        docs_dir.mkdir(parents=True, exist_ok=True)
+
+        # Prefer root-level state (Prime CLI) as a source of truth.
+        echo_state = self._read_json(self.root / "state" / "echo_state.json") or {}
+        garden_ledger = self._read_json(self.root / "state" / "garden_ledger.json") or {}
+        limnus_state = self._read_json(self.root / "state" / "limnus_memory.json") or {}
+
+        # Fallback to frontend/assets ledger if present.
+        frontend_ledger = self._read_json(self.root / "frontend" / "assets" / "ledger.json") or {}
+
+        if docs:
+            path = docs_dir / "kira_knowledge.md"
+            alpha = echo_state.get("alpha") or echo_state.get("quantum_state", {}).get("alpha", 0.0)
+            beta = echo_state.get("beta") or echo_state.get("quantum_state", {}).get("beta", 0.0)
+            gamma = echo_state.get("gamma") or echo_state.get("quantum_state", {}).get("gamma", 0.0)
+            persona = echo_state.get("persona") or echo_state.get("last_mode") or "unknown"
+
+            garden_entries = (garden_ledger.get("entries") or []) if isinstance(garden_ledger, dict) else []
+            garden_stage = garden_ledger.get("stage") or garden_ledger.get("current_stage") or "unknown"
+
+            limnus_stats = (limnus_state.get("stats") or {}) if isinstance(limnus_state, dict) else {}
+            l1 = limnus_stats.get("L1_count", 0)
+            l2 = limnus_stats.get("L2_count", 0)
+            l3 = limnus_stats.get("L3_count", 0)
+
+            # Blocks from frontend ledger if available
+            blocks = []
+            if isinstance(frontend_ledger, dict):
+                blocks = frontend_ledger.get("entries") or frontend_ledger.get("blocks") or []
+
+            content = (
+                "# Kira Knowledge Summary\n\n"
+                "This document summarizes current persona state, ritual progress, and memory/ledger stats.\n\n"
+                "## Echo Persona\n"
+                f"- Persona: {persona}\n"
+                f"- Quantum state: α={alpha:.3f} β={beta:.3f} γ={gamma:.3f}\n\n"
+                "## Garden Ritual\n"
+                f"- Stage: {garden_stage}\n"
+                f"- Entries: {len(garden_entries)}\n\n"
+                "## Limnus Memory\n"
+                f"- L1: {l1}  L2: {l2}  L3: {l3}\n\n"
+                "## Ledger Snapshot\n"
+                f"- Blocks (if available): {len(blocks)}\n"
+            )
+            path.write_text(content, encoding="utf-8")
+            generated.append(str(path))
+
+        if types:
+            tpath = docs_dir / "kira_types.d.ts"
+            tpath.write_text(
+                (
+                    "// Minimal TypeScript definitions for VesselOS knowledge surfaces\n"
+                    "export type QuantumState = { alpha: number; beta: number; gamma: number };\n"
+                    "export type PersonaState = { persona: string; glyph?: string; quantum_state: QuantumState };\n"
+                    "export type LedgerBlock = { ts: string; kind?: string; data?: any; prev?: string; hash?: string };\n"
+                    "export type Ledger = { entries?: any[]; blocks?: LedgerBlock[] };\n"
+                ),
+                encoding="utf-8",
+            )
+            generated.append(str(tpath))
+
+        log_event("kira", "codegen", {"docs": docs, "types": types, "generated": generated}, status="ok")
+        return "generated" if generated else "noop"
+
+    def _read_json(self, path: Path) -> Any:
+        try:
+            if path.exists():
+                return json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return None
+        return None

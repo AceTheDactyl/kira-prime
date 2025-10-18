@@ -1,13 +1,8 @@
-name: CI
+name: CI - Tests and Audits
 
 on:
-  push:
-    branches:
-      - main
-      - chore/**
-      - feature/**
-      - fix/**
-  pull_request:
+  push: {}
+  pull_request: {}
 
 jobs:
   test:
@@ -22,7 +17,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Install Python dependencies
         run: |
@@ -30,10 +25,21 @@ jobs:
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
           fi
+          if [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt
+          fi
           pip install pytest
 
       - name: Run Python tests
         run: pytest -q
+
+      - name: Kira integrity validation
+        run: |
+          python3 vesselos.py kira validate
+
+      - name: Full system audit (non-blocking)
+        run: |
+          python3 vesselos.py audit full --workspace example || true
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -65,7 +71,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Install Python dependencies
         run: |
@@ -100,6 +106,16 @@ jobs:
         env:
           COLLAB_SMOKE_ENABLED: "1"
         run: pytest -q tests/test_collab_server.py
+
+      - name: Upload audit logs (if present)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-audit-logs
+          path: |
+            workspaces/example/logs/**
+            workspaces/example/state/**
+          if-no-files-found: ignore
 
       - name: Collab logs (on failure)
         if: failure()

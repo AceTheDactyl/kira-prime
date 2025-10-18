@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      - "v*.*.*"
   workflow_dispatch:
     inputs:
       tag:
@@ -64,11 +64,16 @@ jobs:
         run: |
           python -m pip install -U pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
           pip install faiss-cpu || true
 
       - name: Run Python tests
         run: |
-          python -m pytest -q || true
+          python -m pytest -q
+
+      - name: Kira validation (ledger/coherence)
+        run: |
+          python3 vesselos.py kira validate
 
       - name: Build FAISS index (optional)
         run: |
@@ -126,6 +131,18 @@ jobs:
           python scripts/assemble_changelog.py > CHANGELOG_RELEASE.md
           cat CHANGELOG_RELEASE.md
 
+      - name: Generate knowledge docs (Kira)
+        run: |
+          python3 vesselos.py kira codegen --docs
+
+      - name: Publish release with Kira
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Kira will package artifacts and create the GitHub release via gh
+          python3 vesselos.py kira publish --run --release --tag "${{ steps.meta.outputs.tag }}" \
+            --asset docs/kira_knowledge.md
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -134,22 +151,8 @@ jobs:
             CHANGELOG_RELEASE.md
             lambda-vite-dist.tar.gz
             state/ledger_export.json
+            dist/codex_release_*.zip
+            dist/CHANGELOG_*.md
+            dist/ledger_export.json
             ${{ env.VSIX_PATH }}
           if-no-files-found: ignore
-
-      - name: Create GitHub release
-        if: ${{ steps.meta.outputs.dry_run != 'true' }}
-        env:
-          TAG_NAME: ${{ steps.meta.outputs.tag }}
-          PRERELEASE_FLAG: ${{ steps.meta.outputs.prerelease }}
-        run: |
-          set -euo pipefail
-          ASSETS="lambda-vite-dist.tar.gz"
-          if [ -n "${VSIX_PATH:-}" ] && [ -f "${VSIX_PATH}" ]; then
-            ASSETS="${ASSETS} ${VSIX_PATH}"
-          fi
-          if [ -f state/ledger_export.json ]; then
-            ASSETS="${ASSETS} state/ledger_export.json"
-          fi
-          gh release create "${TAG_NAME}" --title "Release ${TAG_NAME}" ${PRERELEASE_FLAG} \
-            --notes-file CHANGELOG_RELEASE.md ${ASSETS}
