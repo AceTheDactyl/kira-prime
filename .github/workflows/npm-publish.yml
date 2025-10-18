@@ -1,0 +1,48 @@
+name: Publish npm (GitHub Packages)
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@AceTheDactyl'
+      - name: Configure npm auth (GitHub Packages)
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "${NPM_TOKEN}" ]; then
+            echo "NPM_TOKEN secret is missing. Add a PAT (classic) with read:packages, write:packages as NPM_TOKEN" >&2
+            exit 1
+          fi
+          echo "//npm.pkg.github.com/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          npm config set @AceTheDactyl:registry https://npm.pkg.github.com
+      - name: Set version from tag (if available)
+        run: |
+          cd "RHZ Stylus firmware/packages/rhz-stylus-arch"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            TAG="${GITHUB_REF_NAME#v}"
+            echo "Setting package.json version to ${TAG}"
+            jq ".version=\"${TAG}\"" package.json > package.json.tmp && mv package.json.tmp package.json
+          fi
+      - name: Pack (dry-run)
+        run: |
+          cd "RHZ Stylus firmware/packages/rhz-stylus-arch"
+          npm pack --dry-run
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          cd "RHZ Stylus firmware/packages/rhz-stylus-arch"
+          npm publish --access public
