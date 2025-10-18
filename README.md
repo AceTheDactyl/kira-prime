@@ -1,5 +1,5 @@
 The Living Garden Chronicles – Build & Usage Guide
-Release: v0.3.0 (2025-10-18)
+Release: v0.3.1 (2025-10-18)
 
 ![vesselos-validate](https://github.com/AceTheDactyl/kira-prime/actions/workflows/vesselos-validate.yml/badge.svg)
 [![Build (main)](https://github.com/AceTheDactyl/kira-prime/actions/workflows/vesselos-validate.yml/badge.svg?branch=main)](https://github.com/AceTheDactyl/kira-prime/actions/workflows/vesselos-validate.yml)
